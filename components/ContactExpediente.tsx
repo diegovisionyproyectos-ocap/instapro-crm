@@ -25,7 +25,7 @@ const CONTACT_STATUS_LABELS: Record<string, string> = {
 };
 
 function fmt(n: number) {
-  return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(n);
+  return '$ ' + new Intl.NumberFormat('es-AR', { maximumFractionDigits: 0 }).format(n);
 }
 
 function PhaseBar({ project }: { project: Project }) {

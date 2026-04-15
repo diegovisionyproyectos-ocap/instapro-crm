@@ -5,7 +5,7 @@ import Link from 'next/link';
 import type { Contact, Deal } from '@/lib/types';
 
 function fmt(n: number) {
-  return new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(n);
+  return '$ ' + new Intl.NumberFormat('es-AR', { maximumFractionDigits: 0 }).format(n);
 }
 
 const STAGE_LABELS: Record<string, string> = {
