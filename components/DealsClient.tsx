@@ -36,13 +36,20 @@ export default function DealsClient() {
 
   async function load() {
     setLoading(true);
-    const [dealsRes, contactsRes] = await Promise.all([
-      fetch('/api/deals'),
-      fetch('/api/contacts'),
-    ]);
-    setDeals(await dealsRes.json());
-    setContacts(await contactsRes.json());
-    setLoading(false);
+    try {
+      const [dealsRes, contactsRes] = await Promise.all([
+        fetch('/api/deals'),
+        fetch('/api/contacts'),
+      ]);
+      const [d, c] = await Promise.all([dealsRes.json(), contactsRes.json()]);
+      setDeals(Array.isArray(d) ? d : []);
+      setContacts(Array.isArray(c) ? c : []);
+    } catch {
+      setDeals([]);
+      setContacts([]);
+    } finally {
+      setLoading(false);
+    }
   }
 
   useEffect(() => { load(); }, []);
@@ -66,7 +73,7 @@ export default function DealsClient() {
     setShowModal(true);
   }
 
-  async function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.SyntheticEvent) {
     e.preventDefault();
     setSaving(true);
     const contact = contacts.find((c) => c.id === form.contact_id);

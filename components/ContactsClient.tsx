@@ -11,18 +11,30 @@ const STATUS_LABELS: Record<ContactStatus, string> = {
 };
 
 const STATUS_COLORS: Record<ContactStatus, string> = {
-  lead: 'bg-blue-100 text-blue-700',
-  prospect: 'bg-yellow-100 text-yellow-700',
-  customer: 'bg-green-100 text-green-700',
-  inactive: 'bg-gray-100 text-gray-500',
+  lead: 'bg-blue-50 text-blue-600 border border-blue-100',
+  prospect: 'bg-amber-50 text-amber-600 border border-amber-100',
+  customer: 'bg-emerald-50 text-emerald-600 border border-emerald-100',
+  inactive: 'bg-slate-50 text-slate-500 border border-slate-100',
 };
 
-const EMPTY_FORM = { name: '', email: '', phone: '', company: '', status: 'lead' as ContactStatus };
+const AVATAR_COLORS = ['bg-indigo-500', 'bg-violet-500', 'bg-pink-500', 'bg-emerald-500', 'bg-orange-500', 'bg-cyan-500'];
+
+const EMPTY_FORM = { name: '', email: '', phone: '', company: '', city: '', status: 'lead' as ContactStatus };
+
+function Avatar({ name, idx }: { name: string; idx: number }) {
+  const initials = name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
+  return (
+    <div className={`w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold text-white shrink-0 ${AVATAR_COLORS[idx % AVATAR_COLORS.length]}`}>
+      {initials}
+    </div>
+  );
+}
 
 export default function ContactsClient() {
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+  const [filterStatus, setFilterStatus] = useState<ContactStatus | 'all'>('all');
   const [showModal, setShowModal] = useState(false);
   const [editing, setEditing] = useState<Contact | null>(null);
   const [form, setForm] = useState(EMPTY_FORM);
@@ -30,10 +42,15 @@ export default function ContactsClient() {
 
   async function load() {
     setLoading(true);
-    const res = await fetch('/api/contacts');
-    const data = await res.json();
-    setContacts(data);
-    setLoading(false);
+    try {
+      const res = await fetch('/api/contacts');
+      const data = await res.json();
+      setContacts(Array.isArray(data) ? data : []);
+    } catch {
+      setContacts([]);
+    } finally {
+      setLoading(false);
+    }
   }
 
   useEffect(() => { load(); }, []);
@@ -51,12 +68,13 @@ export default function ContactsClient() {
       email: contact.email,
       phone: contact.phone,
       company: contact.company,
+      city: contact.city || '',
       status: contact.status,
     });
     setShowModal(true);
   }
 
-  async function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.SyntheticEvent) {
     e.preventDefault();
     setSaving(true);
     if (editing) {
@@ -83,23 +101,35 @@ export default function ContactsClient() {
     load();
   }
 
-  const filtered = contacts.filter(
-    (c) =>
+  const filtered = contacts.filter((c) => {
+    const matchSearch =
       c.name.toLowerCase().includes(search.toLowerCase()) ||
       c.company.toLowerCase().includes(search.toLowerCase()) ||
-      c.email.toLowerCase().includes(search.toLowerCase())
-  );
+      c.email.toLowerCase().includes(search.toLowerCase()) ||
+      (c.city || '').toLowerCase().includes(search.toLowerCase());
+    const matchStatus = filterStatus === 'all' || c.status === filterStatus;
+    return matchSearch && matchStatus;
+  });
+
+  const counts = {
+    all: contacts.length,
+    lead: contacts.filter(c => c.status === 'lead').length,
+    prospect: contacts.filter(c => c.status === 'prospect').length,
+    customer: contacts.filter(c => c.status === 'customer').length,
+    inactive: contacts.filter(c => c.status === 'inactive').length,
+  };
 
   return (
-    <div>
+    <div className="max-w-6xl">
+      {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-slate-800">Contactos</h1>
-          <p className="text-slate-500 text-sm mt-0.5">{contacts.length} contactos en total</p>
+          <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Contactos</h1>
+          <p className="text-slate-500 mt-1">{contacts.length} contactos registrados</p>
         </div>
         <button
           onClick={openNew}
-          className="bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors flex items-center gap-2"
+          className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold px-5 py-2.5 rounded-xl transition-colors shadow-sm"
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -108,123 +138,156 @@ export default function ContactsClient() {
         </button>
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm border border-slate-100">
-        <div className="p-4 border-b border-slate-100">
+      {/* Filter tabs */}
+      <div className="flex items-center gap-2 mb-4 flex-wrap">
+        {(['all', 'customer', 'prospect', 'lead', 'inactive'] as const).map((s) => (
+          <button
+            key={s}
+            onClick={() => setFilterStatus(s)}
+            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
+              filterStatus === s
+                ? 'bg-indigo-600 text-white'
+                : 'bg-white text-slate-600 border border-slate-200 hover:border-indigo-300 hover:text-indigo-600'
+            }`}
+          >
+            {s === 'all' ? 'Todos' : STATUS_LABELS[s]} ({counts[s]})
+          </button>
+        ))}
+        <div className="ml-auto">
           <input
             type="text"
-            placeholder="Buscar por nombre, empresa o email..."
+            placeholder="Buscar..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full max-w-sm border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
+            className="border border-slate-200 rounded-xl px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 w-56"
           />
         </div>
+      </div>
 
+      {/* Table */}
+      <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
         {loading ? (
-          <div className="p-12 text-center text-slate-400">Cargando...</div>
-        ) : filtered.length === 0 ? (
-          <div className="p-12 text-center text-slate-400">No hay contactos</div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="text-left text-slate-500 text-xs uppercase tracking-wide bg-slate-50">
-                  <th className="px-6 py-3 font-medium">Nombre</th>
-                  <th className="px-6 py-3 font-medium">Empresa</th>
-                  <th className="px-6 py-3 font-medium">Email</th>
-                  <th className="px-6 py-3 font-medium">Teléfono</th>
-                  <th className="px-6 py-3 font-medium">Estado</th>
-                  <th className="px-6 py-3 font-medium">Acciones</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {filtered.map((c) => (
-                  <tr key={c.id} className="hover:bg-slate-50 transition-colors">
-                    <td className="px-6 py-4 font-medium text-slate-800">{c.name}</td>
-                    <td className="px-6 py-4 text-slate-600">{c.company}</td>
-                    <td className="px-6 py-4 text-slate-600">{c.email}</td>
-                    <td className="px-6 py-4 text-slate-600">{c.phone}</td>
-                    <td className="px-6 py-4">
-                      <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_COLORS[c.status]}`}>
-                        {STATUS_LABELS[c.status]}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-3">
-                        <button
-                          onClick={() => openEdit(c)}
-                          className="text-indigo-600 hover:text-indigo-800 text-xs font-medium"
-                        >
-                          Editar
-                        </button>
-                        <button
-                          onClick={() => handleDelete(c.id)}
-                          className="text-red-500 hover:text-red-700 text-xs font-medium"
-                        >
-                          Eliminar
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div className="flex items-center justify-center py-20">
+            <div className="w-8 h-8 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin" />
           </div>
+        ) : filtered.length === 0 ? (
+          <div className="p-16 text-center">
+            <div className="text-4xl mb-3">👥</div>
+            <p className="text-slate-500 font-medium">No se encontraron contactos</p>
+            <p className="text-slate-400 text-sm mt-1">Prueba con otro filtro o agrega un contacto nuevo.</p>
+          </div>
+        ) : (
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="text-left text-xs font-semibold text-slate-400 uppercase tracking-wide bg-slate-50/80">
+                <th className="px-6 py-3.5">Contacto</th>
+                <th className="px-6 py-3.5">Email</th>
+                <th className="px-6 py-3.5">Teléfono</th>
+                <th className="px-6 py-3.5">Ciudad</th>
+                <th className="px-6 py-3.5">Estado</th>
+                <th className="px-6 py-3.5">Acciones</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-50">
+              {filtered.map((c, i) => (
+                <tr key={c.id} className="hover:bg-slate-50/60 transition-colors group">
+                  <td className="px-6 py-4">
+                    <div className="flex items-center gap-3">
+                      <Avatar name={c.name} idx={i} />
+                      <div>
+                        <p className="font-semibold text-slate-800">{c.name}</p>
+                        <p className="text-xs text-slate-400">{c.company}</p>
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 text-slate-600">{c.email}</td>
+                  <td className="px-6 py-4 text-slate-600">{c.phone || '—'}</td>
+                  <td className="px-6 py-4 text-slate-600">
+                    {c.city ? (
+                      <span className="flex items-center gap-1">
+                        <span className="text-slate-400">📍</span> {c.city}
+                      </span>
+                    ) : '—'}
+                  </td>
+                  <td className="px-6 py-4">
+                    <span className={`inline-flex px-2.5 py-0.5 rounded-full text-xs font-semibold ${STATUS_COLORS[c.status]}`}>
+                      {STATUS_LABELS[c.status]}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4">
+                    <div className="flex items-center gap-3 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button onClick={() => openEdit(c)} className="text-indigo-600 hover:text-indigo-800 text-xs font-semibold">
+                        Editar
+                      </button>
+                      <button onClick={() => handleDelete(c.id)} className="text-red-500 hover:text-red-700 text-xs font-semibold">
+                        Eliminar
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         )}
       </div>
 
+      {/* Modal */}
       {showModal && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-md">
-            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
-              <h2 className="font-semibold text-slate-800">
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md">
+            <div className="flex items-center justify-between px-6 py-5 border-b border-slate-100">
+              <h2 className="font-bold text-slate-800 text-lg">
                 {editing ? 'Editar contacto' : 'Nuevo contacto'}
               </h2>
-              <button onClick={() => setShowModal(false)} className="text-slate-400 hover:text-slate-600">
+              <button onClick={() => setShowModal(false)} className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors">
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                 </svg>
               </button>
             </div>
             <form onSubmit={handleSubmit} className="p-6 space-y-4">
-              {(['name', 'email', 'phone', 'company'] as const).map((field) => (
-                <div key={field}>
-                  <label className="block text-xs font-medium text-slate-600 mb-1 capitalize">
-                    {field === 'name' ? 'Nombre' : field === 'email' ? 'Email' : field === 'phone' ? 'Teléfono' : 'Empresa'}
-                  </label>
-                  <input
-                    type={field === 'email' ? 'email' : 'text'}
-                    required={field !== 'phone'}
-                    value={form[field]}
-                    onChange={(e) => setForm({ ...form, [field]: e.target.value })}
-                    className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
-                  />
+              <div className="grid grid-cols-2 gap-4">
+                <div className="col-span-2">
+                  <label className="block text-xs font-semibold text-slate-600 mb-1.5">Nombre completo</label>
+                  <input required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })}
+                    className="w-full border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:border-transparent" />
                 </div>
-              ))}
-              <div>
-                <label className="block text-xs font-medium text-slate-600 mb-1">Estado</label>
-                <select
-                  value={form.status}
-                  onChange={(e) => setForm({ ...form, status: e.target.value as ContactStatus })}
-                  className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
-                >
-                  {Object.entries(STATUS_LABELS).map(([v, l]) => (
-                    <option key={v} value={v}>{l}</option>
-                  ))}
-                </select>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-600 mb-1.5">Email</label>
+                  <input type="email" required value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })}
+                    className="w-full border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:border-transparent" />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-600 mb-1.5">Teléfono</label>
+                  <input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })}
+                    className="w-full border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:border-transparent" />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-600 mb-1.5">Empresa</label>
+                  <input required value={form.company} onChange={(e) => setForm({ ...form, company: e.target.value })}
+                    className="w-full border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:border-transparent" />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-600 mb-1.5">Ciudad</label>
+                  <input placeholder="Ej: Madrid, Barcelona..." value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })}
+                    className="w-full border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:border-transparent" />
+                </div>
+                <div className="col-span-2">
+                  <label className="block text-xs font-semibold text-slate-600 mb-1.5">Estado</label>
+                  <select value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value as ContactStatus })}
+                    className="w-full border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:border-transparent">
+                    {Object.entries(STATUS_LABELS).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+                  </select>
+                </div>
               </div>
-              <div className="flex gap-3 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setShowModal(false)}
-                  className="flex-1 border border-slate-200 text-slate-600 rounded-lg py-2 text-sm font-medium hover:bg-slate-50 transition-colors"
-                >
+              <p className="text-xs text-slate-400">La ciudad se geolocaliza automáticamente para el mapa.</p>
+              <div className="flex gap-3 pt-1">
+                <button type="button" onClick={() => setShowModal(false)}
+                  className="flex-1 border border-slate-200 text-slate-600 rounded-xl py-2.5 text-sm font-semibold hover:bg-slate-50 transition-colors">
                   Cancelar
                 </button>
-                <button
-                  type="submit"
-                  disabled={saving}
-                  className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg py-2 text-sm font-medium transition-colors disabled:opacity-50"
-                >
+                <button type="submit" disabled={saving}
+                  className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl py-2.5 text-sm font-semibold transition-colors disabled:opacity-50">
                   {saving ? 'Guardando...' : 'Guardar'}
                 </button>
               </div>

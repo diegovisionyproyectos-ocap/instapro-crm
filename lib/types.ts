@@ -7,6 +7,9 @@ export interface Contact {
   phone: string;
   company: string;
   status: ContactStatus;
+  city: string;
+  lat: number | null;
+  lng: number | null;
   created_at: string;
 }
 
