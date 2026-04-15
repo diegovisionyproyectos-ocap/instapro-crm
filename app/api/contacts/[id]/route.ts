@@ -8,6 +8,36 @@ async function getSupabase() {
   return supabase;
 }
 
+export async function GET(
+  _request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const { id } = await params;
+  const sb = await getSupabase();
+  if (sb) {
+    const [{ data: contact, error }, { data: projects }] = await Promise.all([
+      sb.from('contacts').select('*').eq('id', id).single(),
+      sb.from('projects').select('*, phases:project_phases(*, checklist_items(*))').eq('contact_id', id).order('created_at', { ascending: false }),
+    ]);
+    if (error) return Response.json({ error: error.message }, { status: 404 });
+    return Response.json({
+      ...contact,
+      projects: (projects || []).map((p: any) => ({
+        ...p,
+        phases: (p.phases || [])
+          .sort((a: any, b: any) => a.phase_order - b.phase_order)
+          .map((ph: any) => ({
+            ...ph,
+            checklist_items: (ph.checklist_items || []).sort((a: any, b: any) => a.item_order - b.item_order),
+          })),
+      })),
+    });
+  }
+  const contact = store.getContact(id);
+  if (!contact) return Response.json({ error: 'Not found' }, { status: 404 });
+  return Response.json({ ...contact, projects: [] });
+}
+
 export async function PUT(
   request: Request,
   { params }: { params: Promise<{ id: string }> }

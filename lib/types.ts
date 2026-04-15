@@ -31,3 +31,61 @@ export interface Deal {
   close_date: string;
   created_at: string;
 }
+
+export type ProjectStatus = 'active' | 'completed' | 'on_hold' | 'cancelled';
+export type PhaseType = 'pre_production' | 'production' | 'post_production';
+export type PhaseStatus = 'pending' | 'in_progress' | 'completed';
+export type EventType = 'meeting' | 'delivery' | 'installation' | 'visit' | 'payment' | 'other';
+
+export interface ChecklistItem {
+  id: string;
+  phase_id: string;
+  project_id: string;
+  text: string;
+  completed: boolean;
+  item_order: number;
+  completed_at: string | null;
+  created_at: string;
+}
+
+export interface ProjectPhase {
+  id: string;
+  project_id: string;
+  phase_type: PhaseType;
+  status: PhaseStatus;
+  phase_order: number;
+  started_at: string | null;
+  completed_at: string | null;
+  created_at: string;
+  checklist_items?: ChecklistItem[];
+}
+
+export interface Project {
+  id: string;
+  deal_id: string | null;
+  contact_id: string | null;
+  contact_name: string | null;
+  name: string;
+  value: number;
+  status: ProjectStatus;
+  address: string | null;
+  lat: number | null;
+  lng: number | null;
+  installer_name: string | null;
+  notes: string | null;
+  started_at: string | null;
+  created_at: string;
+  phases?: ProjectPhase[];
+}
+
+export interface ProjectEvent {
+  id: string;
+  project_id: string;
+  title: string;
+  description: string | null;
+  event_date: string;
+  event_time: string | null;
+  event_type: EventType;
+  created_at: string;
+  project?: { name: string; contact_name: string | null; lat: number | null; lng: number | null };
+}

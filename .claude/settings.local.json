@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(SUPABASE_ACCESS_TOKEN=sbp_b08dede11cc03410747a60999556c2a3c7d3a4e7 supabase link --project-ref fxltjwqsveaukiivddaj --password \"InstaPro2024!Secure#DB\")"
+    ]
+  }
+}

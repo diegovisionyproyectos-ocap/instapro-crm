@@ -54,14 +54,16 @@ const AVATAR_COLORS = ['bg-indigo-500', 'bg-violet-500', 'bg-pink-500', 'bg-emer
 export default function DashboardClient() {
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [deals, setDeals] = useState<Deal[]>([]);
+  const [activeProjects, setActiveProjects] = useState(0);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    Promise.all([fetch('/api/contacts'), fetch('/api/deals')])
-      .then(([cr, dr]) => Promise.all([cr.json(), dr.json()]))
-      .then(([c, d]) => {
+    Promise.all([fetch('/api/contacts'), fetch('/api/deals'), fetch('/api/projects')])
+      .then(([cr, dr, pr]) => Promise.all([cr.json(), dr.json(), pr.json()]))
+      .then(([c, d, p]) => {
         setContacts(Array.isArray(c) ? c : []);
         setDeals(Array.isArray(d) ? d : []);
+        setActiveProjects(Array.isArray(p) ? p.filter((proj: any) => proj.status === 'active').length : 0);
       })
       .catch(() => {})
       .finally(() => setLoading(false));
@@ -113,13 +115,13 @@ export default function DashboardClient() {
       bg: 'bg-emerald-50',
     },
     {
-      label: 'Leads Activos',
-      value: leads.length,
-      sub: 'Por convertir',
+      label: 'Proyectos Activos',
+      value: activeProjects,
+      sub: 'En ejecución',
       icon: (
         <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8}
-            d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+            d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
         </svg>
       ),
       gradient: 'from-orange-500 to-amber-500',
@@ -220,25 +222,43 @@ export default function DashboardClient() {
         </div>
       </div>
 
-      {/* Map CTA */}
-      <div className="mt-6 rounded-2xl overflow-hidden relative" style={{ background: 'linear-gradient(135deg, #312e81 0%, #4f46e5 50%, #7c3aed 100%)' }}>
-        <div className="px-8 py-6 flex items-center justify-between">
-          <div>
-            <h3 className="text-white font-bold text-lg">Mapa de Clientes</h3>
-            <p className="text-indigo-200 text-sm mt-1">
-              {customers.length > 0
-                ? `${customers.length} cliente${customers.length > 1 ? 's' : ''} activo${customers.length > 1 ? 's' : ''} en el mapa`
-                : 'Visualiza tus contactos en el mapa'}
-            </p>
+      {/* CTAs */}
+      <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="rounded-2xl overflow-hidden relative" style={{ background: 'linear-gradient(135deg, #0f4c81 0%, #1d4ed8 50%, #4f46e5 100%)' }}>
+          <div className="px-8 py-6 flex items-center justify-between">
+            <div>
+              <h3 className="text-white font-bold text-lg">Proyectos</h3>
+              <p className="text-blue-200 text-sm mt-1">
+                {activeProjects > 0
+                  ? `${activeProjects} proyecto${activeProjects > 1 ? 's' : ''} en ejecución`
+                  : 'Gestiona tus instalaciones'}
+              </p>
+            </div>
+            <Link
+              href="/proyectos"
+              className="bg-white text-blue-700 font-semibold text-sm px-5 py-2.5 rounded-xl hover:bg-blue-50 transition-colors shadow-sm whitespace-nowrap"
+            >
+              Ver proyectos →
+            </Link>
           </div>
-          <Link
-            href="/mapa"
-            className="bg-white text-indigo-700 font-semibold text-sm px-5 py-2.5 rounded-xl hover:bg-indigo-50 transition-colors shadow-sm whitespace-nowrap"
-          >
-            Ver mapa →
-          </Link>
+          <div className="absolute right-2 top-0 opacity-10 text-9xl select-none pointer-events-none leading-none">🔧</div>
         </div>
-        <div className="absolute right-0 top-0 opacity-10 text-9xl select-none pointer-events-none leading-none">🗺</div>
+
+        <div className="rounded-2xl overflow-hidden relative" style={{ background: 'linear-gradient(135deg, #312e81 0%, #4f46e5 50%, #7c3aed 100%)' }}>
+          <div className="px-8 py-6 flex items-center justify-between">
+            <div>
+              <h3 className="text-white font-bold text-lg">Calendario</h3>
+              <p className="text-indigo-200 text-sm mt-1">Agenda de instalaciones y visitas</p>
+            </div>
+            <Link
+              href="/calendario"
+              className="bg-white text-indigo-700 font-semibold text-sm px-5 py-2.5 rounded-xl hover:bg-indigo-50 transition-colors shadow-sm whitespace-nowrap"
+            >
+              Ver agenda →
+            </Link>
+          </div>
+          <div className="absolute right-2 top-0 opacity-10 text-9xl select-none pointer-events-none leading-none">📅</div>
+        </div>
       </div>
     </div>
   );

@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import type { Contact, ContactStatus } from '@/lib/types';
 
 const STATUS_LABELS: Record<ContactStatus, string> = {
@@ -216,7 +217,10 @@ export default function ContactsClient() {
                   </td>
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button onClick={() => openEdit(c)} className="text-indigo-600 hover:text-indigo-800 text-xs font-semibold">
+                      <Link href={`/contacts/${c.id}`} className="text-indigo-600 hover:text-indigo-800 text-xs font-semibold">
+                        Expediente
+                      </Link>
+                      <button onClick={() => openEdit(c)} className="text-slate-500 hover:text-slate-700 text-xs font-semibold">
                         Editar
                       </button>
                       <button onClick={() => handleDelete(c.id)} className="text-red-500 hover:text-red-700 text-xs font-semibold">

@@ -15,8 +15,28 @@ const nav = [
     ),
   },
   {
+    href: '/proyectos',
+    label: 'Proyectos',
+    icon: (
+      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8}
+          d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+      </svg>
+    ),
+  },
+  {
+    href: '/calendario',
+    label: 'Calendario',
+    icon: (
+      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8}
+          d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+      </svg>
+    ),
+  },
+  {
     href: '/contacts',
-    label: 'Contactos',
+    label: 'Clientes',
     icon: (
       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8}
@@ -71,7 +91,7 @@ export default function Sidebar() {
       <nav className="flex-1 px-3 py-5 space-y-1">
         <p className="text-xs font-semibold text-slate-500 uppercase tracking-widest px-3 mb-3">Menú</p>
         {nav.map(({ href, label, icon }) => {
-          const active = pathname === href;
+          const active = pathname === href || (href !== '/' && pathname.startsWith(href));
           return (
             <Link
               key={href}
@@ -97,8 +117,8 @@ export default function Sidebar() {
             <span className="text-xs font-bold text-indigo-300">IP</span>
           </div>
           <div>
-            <p className="text-white text-xs font-medium">InstaPro</p>
-            <p className="text-slate-500 text-xs">Plan Demo</p>
+            <p className="text-white text-xs font-medium">InstaPro CRM</p>
+            <p className="text-slate-500 text-xs">Gestión de proyectos</p>
           </div>
         </div>
       </div>

@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import type { Contact, Deal, DealStage } from '@/lib/types';
 
 const STAGES: { key: DealStage; label: string; color: string }[] = [
@@ -26,6 +27,7 @@ function fmt(n: number) {
 }
 
 export default function DealsClient() {
+  const router = useRouter();
   const [deals, setDeals] = useState<Deal[]>([]);
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [loading, setLoading] = useState(true);
@@ -103,11 +105,18 @@ export default function DealsClient() {
   }
 
   async function moveStage(deal: Deal, stage: DealStage) {
-    await fetch(`/api/deals/${deal.id}`, {
+    const res = await fetch(`/api/deals/${deal.id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ ...deal, stage }),
     });
+    const data = await res.json();
+    if (stage === 'closed-won' && data.project_id) {
+      if (confirm('¡Cotización ganada! Proyecto creado automáticamente. ¿Ir al proyecto ahora?')) {
+        router.push(`/proyectos/${data.project_id}`);
+        return;
+      }
+    }
     load();
   }
 
