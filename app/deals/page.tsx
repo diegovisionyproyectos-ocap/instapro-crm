@@ -1,5 +1,5 @@
-import DealsClient from '@/components/DealsClient';
+import { redirect } from 'next/navigation';
 
 export default function DealsPage() {
-  return <DealsClient />;
+  redirect('/pipeline');
 }

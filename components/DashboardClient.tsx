@@ -9,21 +9,15 @@ function fmt(n: number) {
 }
 
 const STAGE_LABELS: Record<string, string> = {
-  prospecting: 'Prospección',
-  qualification: 'Calificación',
-  proposal: 'Propuesta',
-  negotiation: 'Negociación',
-  'closed-won': 'Ganado',
-  'closed-lost': 'Perdido',
+  following: 'En seguimiento',
+  won: 'Proyecto ganado',
+  lost: 'Perdido',
 };
 
 const STAGE_COLORS: Record<string, string> = {
-  prospecting: 'bg-slate-100 text-slate-600',
-  qualification: 'bg-blue-100 text-blue-700',
-  proposal: 'bg-purple-100 text-purple-700',
-  negotiation: 'bg-yellow-100 text-yellow-700',
-  'closed-won': 'bg-green-100 text-green-700',
-  'closed-lost': 'bg-red-100 text-red-600',
+  following: 'bg-blue-100 text-blue-700',
+  won: 'bg-emerald-100 text-emerald-700',
+  lost: 'bg-red-100 text-red-600',
 };
 
 const STATUS_COLORS: Record<string, string> = {
@@ -69,8 +63,8 @@ export default function DashboardClient() {
       .finally(() => setLoading(false));
   }, []);
 
-  const openDeals = deals.filter((d) => d.stage !== 'closed-won' && d.stage !== 'closed-lost');
-  const wonDeals = deals.filter((d) => d.stage === 'closed-won');
+  const openDeals = deals.filter((d) => d.stage === 'following');
+  const wonDeals = deals.filter((d) => d.stage === 'won');
   const customers = contacts.filter((c) => c.status === 'customer');
   const leads = contacts.filter((c) => c.status === 'lead');
 
@@ -89,9 +83,9 @@ export default function DashboardClient() {
       bg: 'bg-blue-50',
     },
     {
-      label: 'Negocios Abiertos',
+      label: 'En seguimiento',
       value: openDeals.length,
-      sub: fmt(openDeals.reduce((s, d) => s + d.value, 0)) + ' en pipeline',
+      sub: fmt(openDeals.reduce((s, d) => s + d.value, 0)) + ' en juego',
       icon: (
         <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8}
@@ -104,7 +98,7 @@ export default function DashboardClient() {
     {
       label: 'Ingresos Ganados',
       value: fmt(wonDeals.reduce((s, d) => s + d.value, 0)),
-      sub: `${wonDeals.length} negocios cerrados`,
+      sub: `${wonDeals.length} proyectos ganados`,
       icon: (
         <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8}
@@ -194,8 +188,8 @@ export default function DashboardClient() {
         {/* Deals */}
         <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
           <div className="flex items-center justify-between px-6 py-4 border-b border-slate-50">
-            <h2 className="font-semibold text-slate-800">Últimos Negocios</h2>
-            <Link href="/deals" className="text-xs text-indigo-600 hover:text-indigo-800 font-medium bg-indigo-50 px-3 py-1 rounded-full transition-colors">
+            <h2 className="font-semibold text-slate-800">Pipeline</h2>
+            <Link href="/pipeline" className="text-xs text-indigo-600 hover:text-indigo-800 font-medium bg-indigo-50 px-3 py-1 rounded-full transition-colors">
               Ver todos →
             </Link>
           </div>

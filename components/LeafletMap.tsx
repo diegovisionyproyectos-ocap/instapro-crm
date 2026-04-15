@@ -3,123 +3,110 @@
 import { useEffect } from 'react';
 import { MapContainer, TileLayer, CircleMarker, Popup, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
-import type { Contact, ContactStatus } from '@/lib/types';
+import type { MapMarker } from './MapClient';
 
-const PIN_COLORS: Record<ContactStatus, string> = {
-  customer: '#10b981',
-  prospect: '#f59e0b',
-  lead: '#6366f1',
-  inactive: '#94a3b8',
-};
-
-const STATUS_LABELS: Record<ContactStatus, string> = {
-  customer: 'Cliente activo',
-  prospect: 'Prospecto',
-  lead: 'Lead',
-  inactive: 'Inactivo',
-};
-
-function FlyTo({ contact, userLocation }: { contact: Contact | null; userLocation: [number, number] | null }) {
+function FlyToSelected({ markerId, markers, userLocation }: {
+  markerId: string | null;
+  markers: MapMarker[];
+  userLocation: [number, number] | null;
+}) {
   const map = useMap();
   useEffect(() => {
-    if (contact?.lat && contact?.lng) {
-      map.flyTo([contact.lat, contact.lng], 14, { duration: 1 });
+    if (markerId) {
+      const m = markers.find(x => x.id === markerId);
+      if (m) map.flyTo([m.lat, m.lng], 14, { duration: 1 });
     }
-  }, [contact, map]);
+  }, [markerId, markers, map]);
 
-  // Fly to user location on first load
   useEffect(() => {
-    if (userLocation) {
-      map.flyTo(userLocation, 13, { duration: 1.5 });
-    }
+    if (userLocation) map.flyTo(userLocation, 13, { duration: 1.5 });
   }, [userLocation, map]);
 
   return null;
 }
 
 interface Props {
-  contacts: Contact[];
-  selected: Contact | null;
-  onSelect: (c: Contact) => void;
+  markers: MapMarker[];
+  selectedId: string | null;
+  onSelect: (id: string) => void;
   userLocation: [number, number] | null;
 }
 
-export default function LeafletMap({ contacts, selected, onSelect, userLocation }: Props) {
-  const mapped = contacts.filter((c) => c.lat && c.lng);
+export default function LeafletMap({ markers, selectedId, onSelect, userLocation }: Props) {
   const center: [number, number] =
-    userLocation ?? (mapped.length > 0 ? [mapped[0].lat!, mapped[0].lng!] : [40.4168, -3.7038]);
+    userLocation ??
+    (markers.length > 0 ? [markers[0].lat, markers[0].lng] : [-34.6037, -58.3816]);
 
   return (
     <MapContainer
       center={center}
-      zoom={userLocation ? 13 : 6}
+      zoom={userLocation ? 13 : markers.length === 1 ? 14 : 5}
       style={{ height: '100%', width: '100%' }}
       className="z-0"
     >
       <TileLayer
-        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
       />
-      <FlyTo contact={selected} userLocation={userLocation} />
+      <FlyToSelected markerId={selectedId} markers={markers} userLocation={userLocation} />
 
       {/* User location — pulsing blue dot */}
       {userLocation && (
         <>
-          {/* Outer pulse ring */}
-          <CircleMarker
-            center={userLocation}
-            radius={22}
-            pathOptions={{ color: '#3b82f6', weight: 0, fillColor: '#3b82f6', fillOpacity: 0.15 }}
-            interactive={false}
-          />
-          {/* Middle ring */}
-          <CircleMarker
-            center={userLocation}
-            radius={13}
-            pathOptions={{ color: '#3b82f6', weight: 0, fillColor: '#3b82f6', fillOpacity: 0.25 }}
-            interactive={false}
-          />
-          {/* Core dot */}
-          <CircleMarker
-            center={userLocation}
-            radius={7}
-            pathOptions={{ color: 'white', weight: 3, fillColor: '#2563eb', fillOpacity: 1 }}
-          >
-            <Popup>
-              <div className="text-sm font-semibold text-blue-700">📍 Tu ubicación</div>
-            </Popup>
+          <CircleMarker center={userLocation} radius={22}
+            pathOptions={{ color: '#3b82f6', weight: 0, fillColor: '#3b82f6', fillOpacity: 0.12 }}
+            interactive={false} />
+          <CircleMarker center={userLocation} radius={13}
+            pathOptions={{ color: '#3b82f6', weight: 0, fillColor: '#3b82f6', fillOpacity: 0.22 }}
+            interactive={false} />
+          <CircleMarker center={userLocation} radius={7}
+            pathOptions={{ color: 'white', weight: 3, fillColor: '#2563eb', fillOpacity: 1 }}>
+            <Popup><div className="text-sm font-semibold text-blue-700">📍 Tu ubicación</div></Popup>
           </CircleMarker>
         </>
       )}
 
-      {/* Contact markers */}
-      {mapped.map((c) => {
-        const isSelected = selected?.id === c.id;
-        const color = PIN_COLORS[c.status];
+      {/* Markers */}
+      {markers.map((m) => {
+        const isSelected = m.id === selectedId;
         return (
           <CircleMarker
-            key={c.id}
-            center={[c.lat!, c.lng!]}
-            radius={isSelected ? 18 : c.status === 'customer' ? 14 : 11}
+            key={m.id}
+            center={[m.lat, m.lng]}
+            radius={isSelected ? 18 : 12}
             pathOptions={{
               color: 'white',
               weight: isSelected ? 3 : 2,
-              fillColor: color,
-              fillOpacity: isSelected ? 1 : 0.85,
+              fillColor: m.color,
+              fillOpacity: isSelected ? 1 : 0.88,
             }}
-            eventHandlers={{ click: () => onSelect(c) }}
+            eventHandlers={{ click: () => onSelect(m.id) }}
           >
+            {/* Pulse ring for live installations */}
+            {m.pulse && (
+              <CircleMarker
+                center={[m.lat, m.lng]}
+                radius={24}
+                pathOptions={{ color: m.color, weight: 2, fillColor: m.color, fillOpacity: 0.15 }}
+                interactive={false}
+              />
+            )}
             <Popup>
               <div className="text-sm min-w-[160px]">
-                <p className="font-bold text-slate-800">{c.name}</p>
-                <p className="text-slate-500 text-xs">{c.company}</p>
-                <p className="text-slate-400 text-xs mt-0.5">📍 {c.city}</p>
+                <p className="font-bold text-slate-800">{m.label}</p>
+                <p className="text-slate-500 text-xs">{m.sublabel}</p>
                 <span
                   className="inline-block mt-1.5 px-2 py-0.5 rounded-full text-xs font-semibold"
-                  style={{ background: color + '22', color }}
+                  style={{ background: m.color + '22', color: m.color }}
                 >
-                  {STATUS_LABELS[c.status]}
+                  {m.tag}
                 </span>
+                {m.date && (
+                  <p className="text-slate-400 text-xs mt-1">
+                    {new Date(m.date + 'T12:00:00').toLocaleDateString('es-AR', { day: 'numeric', month: 'short' })}
+                    {m.time ? ` · ${m.time.slice(0, 5)} hs` : ''}
+                  </p>
+                )}
               </div>
             </Popup>
           </CircleMarker>

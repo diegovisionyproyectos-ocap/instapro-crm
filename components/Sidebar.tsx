@@ -45,8 +45,8 @@ const nav = [
     ),
   },
   {
-    href: '/deals',
-    label: 'Negocios',
+    href: '/pipeline',
+    label: 'Pipeline',
     icon: (
       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8}
@@ -85,6 +85,19 @@ export default function Sidebar() {
             <p className="text-indigo-300 text-xs">Gestión de clientes</p>
           </div>
         </div>
+      </div>
+
+      {/* Quick action */}
+      <div className="px-4 py-3 border-b border-white/10">
+        <Link
+          href="/pipeline"
+          className="w-full flex items-center justify-center gap-2 bg-indigo-500 hover:bg-indigo-400 text-white text-sm font-bold py-2.5 rounded-xl transition-colors shadow-sm"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" />
+          </svg>
+          Nuevo cliente
+        </Link>
       </div>
 
       {/* Nav */}

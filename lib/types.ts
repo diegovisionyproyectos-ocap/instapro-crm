@@ -13,13 +13,7 @@ export interface Contact {
   created_at: string;
 }
 
-export type DealStage =
-  | 'prospecting'
-  | 'qualification'
-  | 'proposal'
-  | 'negotiation'
-  | 'closed-won'
-  | 'closed-lost';
+export type DealStage = 'following' | 'won' | 'lost';
 
 export interface Deal {
   id: string;

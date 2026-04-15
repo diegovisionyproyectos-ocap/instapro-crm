@@ -13,7 +13,7 @@ export async function GET() {
 
   const { data, error } = await sb
     .from('project_events')
-    .select(`*, project:projects(name, contact_name, lat, lng, status)`)
+    .select(`*, project:projects(id, name, contact_name, contact_id, lat, lng, status, installer_name)`)
     .order('event_date', { ascending: true });
 
   if (error) return Response.json({ error: error.message }, { status: 500 });
