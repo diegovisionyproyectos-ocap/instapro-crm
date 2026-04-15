@@ -19,13 +19,21 @@ const STATUS_LABELS: Record<ContactStatus, string> = {
   inactive: 'Inactivo',
 };
 
-function FlyTo({ contact }: { contact: Contact | null }) {
+function FlyTo({ contact, userLocation }: { contact: Contact | null; userLocation: [number, number] | null }) {
   const map = useMap();
   useEffect(() => {
     if (contact?.lat && contact?.lng) {
       map.flyTo([contact.lat, contact.lng], 14, { duration: 1 });
     }
   }, [contact, map]);
+
+  // Fly to user location on first load
+  useEffect(() => {
+    if (userLocation) {
+      map.flyTo(userLocation, 13, { duration: 1.5 });
+    }
+  }, [userLocation, map]);
+
   return null;
 }
 
@@ -33,17 +41,18 @@ interface Props {
   contacts: Contact[];
   selected: Contact | null;
   onSelect: (c: Contact) => void;
+  userLocation: [number, number] | null;
 }
 
-export default function LeafletMap({ contacts, selected, onSelect }: Props) {
+export default function LeafletMap({ contacts, selected, onSelect, userLocation }: Props) {
   const mapped = contacts.filter((c) => c.lat && c.lng);
   const center: [number, number] =
-    mapped.length > 0 ? [mapped[0].lat!, mapped[0].lng!] : [40.4168, -3.7038];
+    userLocation ?? (mapped.length > 0 ? [mapped[0].lat!, mapped[0].lng!] : [40.4168, -3.7038]);
 
   return (
     <MapContainer
       center={center}
-      zoom={6}
+      zoom={userLocation ? 13 : 6}
       style={{ height: '100%', width: '100%' }}
       className="z-0"
     >
@@ -51,7 +60,39 @@ export default function LeafletMap({ contacts, selected, onSelect }: Props) {
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
       />
-      <FlyTo contact={selected} />
+      <FlyTo contact={selected} userLocation={userLocation} />
+
+      {/* User location — pulsing blue dot */}
+      {userLocation && (
+        <>
+          {/* Outer pulse ring */}
+          <CircleMarker
+            center={userLocation}
+            radius={22}
+            pathOptions={{ color: '#3b82f6', weight: 0, fillColor: '#3b82f6', fillOpacity: 0.15 }}
+            interactive={false}
+          />
+          {/* Middle ring */}
+          <CircleMarker
+            center={userLocation}
+            radius={13}
+            pathOptions={{ color: '#3b82f6', weight: 0, fillColor: '#3b82f6', fillOpacity: 0.25 }}
+            interactive={false}
+          />
+          {/* Core dot */}
+          <CircleMarker
+            center={userLocation}
+            radius={7}
+            pathOptions={{ color: 'white', weight: 3, fillColor: '#2563eb', fillOpacity: 1 }}
+          >
+            <Popup>
+              <div className="text-sm font-semibold text-blue-700">📍 Tu ubicación</div>
+            </Popup>
+          </CircleMarker>
+        </>
+      )}
+
+      {/* Contact markers */}
       {mapped.map((c) => {
         const isSelected = selected?.id === c.id;
         const color = PIN_COLORS[c.status];

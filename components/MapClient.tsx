@@ -42,6 +42,8 @@ export default function MapClient() {
   const [filter, setFilter] = useState<ContactStatus | 'all'>('all');
   const [search, setSearch] = useState('');
   const [selected, setSelected] = useState<Contact | null>(null);
+  const [userLocation, setUserLocation] = useState<[number, number] | null>(null);
+  const [locStatus, setLocStatus] = useState<'idle' | 'loading' | 'ok' | 'denied'>('idle');
 
   useEffect(() => {
     fetch('/api/contacts')
@@ -49,7 +51,33 @@ export default function MapClient() {
       .then((d) => setContacts(Array.isArray(d) ? d : []))
       .catch(() => setContacts([]))
       .finally(() => setLoading(false));
+
+    // Request geolocation automatically on load
+    if (navigator.geolocation) {
+      setLocStatus('loading');
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          setUserLocation([pos.coords.latitude, pos.coords.longitude]);
+          setLocStatus('ok');
+        },
+        () => setLocStatus('denied'),
+        { enableHighAccuracy: true, timeout: 10000 }
+      );
+    }
   }, []);
+
+  function requestLocation() {
+    if (!navigator.geolocation) return;
+    setLocStatus('loading');
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setUserLocation([pos.coords.latitude, pos.coords.longitude]);
+        setLocStatus('ok');
+      },
+      () => setLocStatus('denied'),
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
+  }
 
   const withCoords = contacts.filter((c) => c.lat && c.lng);
 
@@ -124,11 +152,37 @@ export default function MapClient() {
           })}
         </div>
 
-        {withoutCoords.length > 0 && (
-          <span className="ml-auto text-xs text-amber-600 bg-amber-50 border border-amber-100 px-2.5 py-1 rounded-full">
-            {withoutCoords.length} sin ubicación
-          </span>
-        )}
+        <div className="ml-auto flex items-center gap-2">
+          {/* Mi ubicación button */}
+          <button
+            onClick={requestLocation}
+            disabled={locStatus === 'loading'}
+            title={locStatus === 'denied' ? 'Permiso denegado por el navegador' : 'Centrar en mi ubicación'}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border transition-all ${
+              locStatus === 'ok'
+                ? 'bg-blue-600 text-white border-blue-600'
+                : locStatus === 'denied'
+                ? 'bg-red-50 text-red-500 border-red-200 cursor-not-allowed'
+                : 'bg-white text-slate-600 border-slate-200 hover:border-blue-300 hover:text-blue-600'
+            }`}
+          >
+            {locStatus === 'loading' ? (
+              <span className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin" />
+            ) : (
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                  d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0zM15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+            )}
+            {locStatus === 'ok' ? 'Mi ubicación' : locStatus === 'denied' ? 'Permiso denegado' : 'Mi ubicación'}
+          </button>
+
+          {withoutCoords.length > 0 && (
+            <span className="text-xs text-amber-600 bg-amber-50 border border-amber-100 px-2.5 py-1 rounded-full">
+              {withoutCoords.length} sin ubicación
+            </span>
+          )}
+        </div>
       </div>
 
       {/* Map + panel */}
@@ -140,13 +194,19 @@ export default function MapClient() {
               <div className="w-8 h-8 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin" />
             </div>
           ) : (
-            <LeafletMap contacts={displayed} selected={selected} onSelect={setSelected} />
+            <LeafletMap contacts={displayed} selected={selected} onSelect={setSelected} userLocation={userLocation} />
           )}
 
           {/* Legend overlay */}
           <div className="absolute bottom-6 left-4 z-[1000] bg-white rounded-xl shadow-md border border-slate-100 px-4 py-3">
             <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Leyenda</p>
             <div className="space-y-1.5">
+              {userLocation && (
+                <div className="flex items-center gap-2 pb-1.5 mb-1.5 border-b border-slate-100">
+                  <div className="w-3 h-3 rounded-full border-2 border-white shadow-sm bg-blue-600" />
+                  <span className="text-xs font-semibold text-blue-600">Tú</span>
+                </div>
+              )}
               {FILTERS.filter(f => f.color).map(({ key, label, color }) => (
                 <div key={key} className="flex items-center gap-2">
                   <div className="w-3 h-3 rounded-full border-2 border-white shadow-sm" style={{ background: color }} />
