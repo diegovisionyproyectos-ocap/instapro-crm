@@ -50,7 +50,7 @@ export default function LeafletMap({ markers, selectedId, onSelect, userLocation
       />
       <FlyToSelected markerId={selectedId} markers={markers} userLocation={userLocation} />
 
-      {/* User location — pulsing blue dot */}
+      {/* User location */}
       {userLocation && (
         <>
           <CircleMarker center={userLocation} radius={22}
@@ -66,7 +66,18 @@ export default function LeafletMap({ markers, selectedId, onSelect, userLocation
         </>
       )}
 
-      {/* Markers */}
+      {/* Pulse rings for "live" markers — rendered as separate siblings BEFORE the main marker */}
+      {markers.filter(m => m.pulse).map((m) => (
+        <CircleMarker
+          key={`pulse-${m.id}`}
+          center={[m.lat, m.lng]}
+          radius={26}
+          pathOptions={{ color: m.color, weight: 2, fillColor: m.color, fillOpacity: 0.15 }}
+          interactive={false}
+        />
+      ))}
+
+      {/* Main markers */}
       {markers.map((m) => {
         const isSelected = m.id === selectedId;
         return (
@@ -82,15 +93,6 @@ export default function LeafletMap({ markers, selectedId, onSelect, userLocation
             }}
             eventHandlers={{ click: () => onSelect(m.id) }}
           >
-            {/* Pulse ring for live installations */}
-            {m.pulse && (
-              <CircleMarker
-                center={[m.lat, m.lng]}
-                radius={24}
-                pathOptions={{ color: m.color, weight: 2, fillColor: m.color, fillOpacity: 0.15 }}
-                interactive={false}
-              />
-            )}
             <Popup>
               <div className="text-sm min-w-[160px]">
                 <p className="font-bold text-slate-800">{m.label}</p>

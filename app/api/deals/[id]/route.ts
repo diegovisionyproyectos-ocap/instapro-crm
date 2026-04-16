@@ -23,7 +23,7 @@ async function autoCreateProject(sb: NonNullable<Awaited<ReturnType<typeof getSu
   // Get contact lat/lng
   const { data: contact } = await sb
     .from('contacts')
-    .select('lat, lng, city')
+    .select('name, address, lat, lng')
     .eq('id', deal.contact_id)
     .maybeSingle();
 
@@ -32,10 +32,11 @@ async function autoCreateProject(sb: NonNullable<Awaited<ReturnType<typeof getSu
     .insert([{
       deal_id: deal.id,
       contact_id: deal.contact_id,
-      contact_name: deal.contact_name,
+      contact_name: contact?.name || deal.contact_name,
       name: deal.title,
       value: deal.value,
       status: 'active',
+      address: contact?.address || null,
       lat: contact?.lat || null,
       lng: contact?.lng || null,
       started_at: new Date().toISOString().split('T')[0],
@@ -81,15 +82,17 @@ export async function PUT(
 ) {
   const { id } = await params;
   const body = await request.json();
+  const dealUpdate = { ...body };
+  delete dealUpdate.client_code;
   const sb = await getSupabase();
 
   if (sb) {
-    const { data, error } = await sb.from('deals').update(body).eq('id', id).select().single();
+    const { data, error } = await sb.from('deals').update(dealUpdate).eq('id', id).select().single();
     if (error) return Response.json({ error: error.message }, { status: 500 });
 
     // Auto-create project when deal is won
     let projectId: string | null = null;
-    if (body.stage === 'closed-won') {
+    if (dealUpdate.stage === 'won') {
       projectId = await autoCreateProject(sb, {
         id,
         title: data.title,

@@ -2,12 +2,14 @@ export type ContactStatus = 'lead' | 'prospect' | 'customer' | 'inactive';
 
 export interface Contact {
   id: string;
+  client_code: string | null;
   name: string;
   email: string;
   phone: string;
   company: string;
   status: ContactStatus;
   city: string;
+  address: string | null;
   lat: number | null;
   lng: number | null;
   created_at: string;
@@ -20,6 +22,7 @@ export interface Deal {
   title: string;
   contact_id: string;
   contact_name: string;
+  client_code?: string | null;
   stage: DealStage;
   value: number;
   close_date: string;
@@ -59,6 +62,7 @@ export interface Project {
   deal_id: string | null;
   contact_id: string | null;
   contact_name: string | null;
+  client_code?: string | null;
   name: string;
   value: number;
   status: ProjectStatus;
@@ -81,5 +85,13 @@ export interface ProjectEvent {
   event_time: string | null;
   event_type: EventType;
   created_at: string;
-  project?: { name: string; contact_name: string | null; lat: number | null; lng: number | null };
+  project?: {
+    id?: string;
+    contact_id?: string | null;
+    name: string;
+    contact_name: string | null;
+    client_code?: string | null;
+    lat: number | null;
+    lng: number | null;
+  };
 }

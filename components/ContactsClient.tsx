@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import type { Contact, ContactStatus } from '@/lib/types';
+import NuevoClienteForm from './NuevoClienteForm';
 
 const STATUS_LABELS: Record<ContactStatus, string> = {
   lead: 'Lead',
@@ -58,7 +59,6 @@ export default function ContactsClient() {
 
   function openNew() {
     setEditing(null);
-    setForm(EMPTY_FORM);
     setShowModal(true);
   }
 
@@ -77,27 +77,21 @@ export default function ContactsClient() {
 
   async function handleSubmit(e: React.SyntheticEvent) {
     e.preventDefault();
+    if (!editing) return;
     setSaving(true);
-    if (editing) {
-      await fetch(`/api/contacts/${editing.id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form),
-      });
-    } else {
-      await fetch('/api/contacts', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form),
-      });
-    }
+    await fetch(`/api/contacts/${editing.id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(form),
+    });
     setSaving(false);
     setShowModal(false);
+    setEditing(null);
     load();
   }
 
   async function handleDelete(id: string) {
-    if (!confirm('¿Eliminar este contacto?')) return;
+    if (!confirm('Eliminar este cliente?')) return;
     await fetch(`/api/contacts/${id}`, { method: 'DELETE' });
     load();
   }
@@ -107,7 +101,8 @@ export default function ContactsClient() {
       c.name.toLowerCase().includes(search.toLowerCase()) ||
       c.company.toLowerCase().includes(search.toLowerCase()) ||
       c.email.toLowerCase().includes(search.toLowerCase()) ||
-      (c.city || '').toLowerCase().includes(search.toLowerCase());
+      (c.city || '').toLowerCase().includes(search.toLowerCase()) ||
+      (c.client_code || '').toLowerCase().includes(search.toLowerCase());
     const matchStatus = filterStatus === 'all' || c.status === filterStatus;
     return matchSearch && matchStatus;
   });
@@ -125,8 +120,8 @@ export default function ContactsClient() {
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Contactos</h1>
-          <p className="text-slate-500 mt-1">{contacts.length} contactos registrados</p>
+          <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Clientes</h1>
+          <p className="text-slate-500 mt-1">{contacts.length} expedientes registrados</p>
         </div>
         <button
           onClick={openNew}
@@ -135,7 +130,7 @@ export default function ContactsClient() {
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
           </svg>
-          Nuevo contacto
+          Nuevo cliente
         </button>
       </div>
 
@@ -157,10 +152,10 @@ export default function ContactsClient() {
         <div className="ml-auto">
           <input
             type="text"
-            placeholder="Buscar..."
+            placeholder="Buscar por nombre, empresa o codigo..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="border border-slate-200 rounded-xl px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 w-56"
+            className="border border-slate-200 rounded-xl px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 w-72"
           />
         </div>
       </div>
@@ -181,7 +176,8 @@ export default function ContactsClient() {
           <table className="w-full text-sm">
             <thead>
               <tr className="text-left text-xs font-semibold text-slate-400 uppercase tracking-wide bg-slate-50/80">
-                <th className="px-6 py-3.5">Contacto</th>
+                <th className="px-6 py-3.5">Expediente</th>
+                <th className="px-6 py-3.5">Cliente</th>
                 <th className="px-6 py-3.5">Email</th>
                 <th className="px-6 py-3.5">Teléfono</th>
                 <th className="px-6 py-3.5">Ciudad</th>
@@ -193,11 +189,16 @@ export default function ContactsClient() {
               {filtered.map((c, i) => (
                 <tr key={c.id} className="hover:bg-slate-50/60 transition-colors group">
                   <td className="px-6 py-4">
+                    <span className="inline-flex rounded-xl border border-indigo-100 bg-indigo-50 px-3 py-1 font-mono text-xs font-bold text-indigo-700">
+                      {c.client_code || 'CLI-????'}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4">
                     <div className="flex items-center gap-3">
                       <Avatar name={c.name} idx={i} />
                       <div>
                         <p className="font-semibold text-slate-800">{c.name}</p>
-                        <p className="text-xs text-slate-400">{c.company}</p>
+                        <p className="text-xs text-slate-400">{c.company || 'Sin empresa cargada'}</p>
                       </div>
                     </div>
                   </td>
@@ -236,20 +237,28 @@ export default function ContactsClient() {
       </div>
 
       {/* Modal */}
-      {showModal && (
+      {showModal && !editing && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <NuevoClienteForm onClose={() => { setShowModal(false); load(); }} />
+        </div>
+      )}
+
+      {showModal && editing && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md">
             <div className="flex items-center justify-between px-6 py-5 border-b border-slate-100">
-              <h2 className="font-bold text-slate-800 text-lg">
-                {editing ? 'Editar contacto' : 'Nuevo contacto'}
-              </h2>
-              <button onClick={() => setShowModal(false)} className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors">
+              <h2 className="font-bold text-slate-800 text-lg">Editar cliente</h2>
+              <button onClick={() => { setShowModal(false); setEditing(null); }} className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors">
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                 </svg>
               </button>
             </div>
             <form onSubmit={handleSubmit} className="p-6 space-y-4">
+              <div className="rounded-xl border border-indigo-100 bg-indigo-50 px-4 py-3">
+                <p className="text-xs font-medium text-indigo-600">Expediente</p>
+                <p className="font-mono text-sm font-bold text-indigo-800">{editing.client_code || 'CLI-????'}</p>
+              </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="col-span-2">
                   <label className="block text-xs font-semibold text-slate-600 mb-1.5">Nombre completo</label>
@@ -284,9 +293,9 @@ export default function ContactsClient() {
                   </select>
                 </div>
               </div>
-              <p className="text-xs text-slate-400">La ciudad se geolocaliza automáticamente para el mapa.</p>
+              <p className="text-xs text-slate-400">El expediente se mantiene fijo. Solo editamos los datos del cliente.</p>
               <div className="flex gap-3 pt-1">
-                <button type="button" onClick={() => setShowModal(false)}
+                <button type="button" onClick={() => { setShowModal(false); setEditing(null); }}
                   className="flex-1 border border-slate-200 text-slate-600 rounded-xl py-2.5 text-sm font-semibold hover:bg-slate-50 transition-colors">
                   Cancelar
                 </button>

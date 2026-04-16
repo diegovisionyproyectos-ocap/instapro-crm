@@ -103,7 +103,14 @@ function DealCard({
         </div>
       </div>
 
-      <p className="text-xs text-slate-500 mb-3">{deal.contact_name}</p>
+      <div className="mb-3 flex items-center gap-2 flex-wrap">
+        <p className="text-xs text-slate-500">{deal.contact_name}</p>
+        {deal.client_code && (
+          <span className="rounded-full border border-indigo-100 bg-indigo-50 px-2 py-0.5 font-mono text-[10px] font-bold text-indigo-700">
+            {deal.client_code}
+          </span>
+        )}
+      </div>
 
       <div className="flex items-center justify-between">
         <span className="text-base font-bold text-indigo-600">{fmt(deal.value)}</span>

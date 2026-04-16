@@ -19,6 +19,7 @@ create table if not exists deals (
   stage text not null default 'prospecting' check (stage in ('prospecting', 'qualification', 'proposal', 'negotiation', 'closed-won', 'closed-lost')),
   value numeric not null default 0,
   close_date date not null,
+  notes text default '',
   created_at timestamptz default now()
 );
 

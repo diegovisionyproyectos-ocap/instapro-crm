@@ -6,6 +6,29 @@ async function getSB() {
   return supabase;
 }
 
+type ChecklistItemRow = { item_order: number } & Record<string, unknown>;
+type PhaseRow = { phase_order: number; checklist_items?: ChecklistItemRow[] | null } & Record<string, unknown>;
+type ProjectRow = {
+  contact?: { client_code?: string | null; name?: string | null } | null;
+  contact_name?: string | null;
+  phases?: PhaseRow[] | null;
+} & Record<string, unknown>;
+
+function normalizeProject(project: ProjectRow | null) {
+  if (!project) return null;
+  return {
+    ...project,
+    client_code: project.contact?.client_code || null,
+    contact_name: project.contact_name || project.contact?.name || null,
+    phases: (project.phases || [])
+      .sort((a, b) => a.phase_order - b.phase_order)
+      .map((phase) => ({
+        ...phase,
+        checklist_items: (phase.checklist_items || []).sort((a, b) => a.item_order - b.item_order),
+      })),
+  };
+}
+
 export async function GET(
   _request: Request,
   { params }: { params: Promise<{ id: string }> }
@@ -16,23 +39,13 @@ export async function GET(
 
   const { data, error } = await sb
     .from('projects')
-    .select(`*, phases:project_phases(*, checklist_items(*))`)
+    .select(`*, contact:contacts(client_code, name), phases:project_phases(*, checklist_items(*))`)
     .eq('id', id)
     .single();
 
   if (error) return Response.json({ error: error.message }, { status: 404 });
 
-  const result = {
-    ...data,
-    phases: (data.phases || [])
-      .sort((a: any, b: any) => a.phase_order - b.phase_order)
-      .map((ph: any) => ({
-        ...ph,
-        checklist_items: (ph.checklist_items || []).sort((a: any, b: any) => a.item_order - b.item_order),
-      })),
-  };
-
-  return Response.json(result);
+  return Response.json(normalizeProject(data));
 }
 
 export async function PUT(

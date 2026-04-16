@@ -458,7 +458,14 @@ export default function ProjectDetailClient({ id }: { id: string }) {
               <div className="flex items-start justify-between">
                 <div>
                   <h1 className="text-xl font-bold text-slate-900">{project.name}</h1>
-                  <p className="text-slate-500 text-sm mt-0.5">{project.contact_name || '—'}</p>
+                  <div className="mt-0.5 flex items-center gap-2 flex-wrap">
+                    <p className="text-slate-500 text-sm">{project.contact_name || '—'}</p>
+                    {project.client_code && (
+                      <span className="rounded-full border border-indigo-100 bg-indigo-50 px-2 py-0.5 font-mono text-[11px] font-bold text-indigo-700">
+                        {project.client_code}
+                      </span>
+                    )}
+                  </div>
                 </div>
                 <div className="flex items-center gap-2">
                   <button

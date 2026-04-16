@@ -176,7 +176,14 @@ export default function ProjectsClient() {
                   </span>
                 </div>
 
-                <p className="text-xs text-slate-500 mb-1">{project.contact_name || '—'}</p>
+                <div className="mb-1 flex items-center gap-2 flex-wrap">
+                  <p className="text-xs text-slate-500">{project.contact_name || '—'}</p>
+                  {project.client_code && (
+                    <span className="rounded-full border border-indigo-100 bg-indigo-50 px-2 py-0.5 font-mono text-[10px] font-bold text-indigo-700">
+                      {project.client_code}
+                    </span>
+                  )}
+                </div>
                 {project.installer_name && (
                   <p className="text-xs text-slate-400">Instalador: {project.installer_name}</p>
                 )}
