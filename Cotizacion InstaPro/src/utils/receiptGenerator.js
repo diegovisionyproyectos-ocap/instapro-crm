@@ -125,13 +125,13 @@ export async function generarReciboPDF(datos, firmaDataUrl = null) {
     coords = defaultCoords;
   }
 
-  const templateBytes = await fetch('/recibo_pago.pdf').then(r => r.arrayBuffer());
+  const templateBytes = await fetch('recibo_pago.pdf').then(r => r.arrayBuffer());
   const pdfDoc = await PDFDocument.load(templateBytes);
   const page   = pdfDoc.getPages()[0];
 
   const font = await cargarFuente(
     pdfDoc,
-    '/fonts/Bricolage_Grotesque/static/BricolageGrotesque-Regular.ttf',
+    'fonts/Bricolage_Grotesque/static/BricolageGrotesque-Regular.ttf',
   );
   const DARK       = rgb(0.08, 0.08, 0.08);
   const BRAND_BLUE = rgb(1 / 255, 21 / 255, 88 / 255);

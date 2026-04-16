@@ -50,7 +50,7 @@ async function cargarFuentePersonalizada(pdfDoc) {
     pdfDoc.registerFontkit(fontkit);
 
     // Usa la variante regular local de Bricolage Grotesque para el PDF.
-    const response = await fetch('/fonts/Bricolage_Grotesque/static/BricolageGrotesque-Regular.ttf');
+    const response = await fetch('fonts/Bricolage_Grotesque/static/BricolageGrotesque-Regular.ttf');
     if (response.ok) {
       const fontBytes = await response.arrayBuffer();
       return await pdfDoc.embedFont(fontBytes);
@@ -91,7 +91,7 @@ export async function generarPDF(datos, firmaDataUrl = null) {
     }
   }
 
-  const templateBytes = await fetch('/plantilla.pdf').then(r => r.arrayBuffer());
+  const templateBytes = await fetch('plantilla.pdf').then(r => r.arrayBuffer());
   const pdfDoc = await PDFDocument.load(templateBytes);
   const page   = pdfDoc.getPages()[0];
 

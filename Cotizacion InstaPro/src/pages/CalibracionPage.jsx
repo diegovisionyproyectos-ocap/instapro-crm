@@ -60,7 +60,7 @@ export default function CalibracionPage() {
         pdfjsLib.GlobalWorkerOptions.workerSrc =
           'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.4.168/build/pdf.worker.min.mjs';
 
-        const data = await fetch('/plantilla.pdf').then((r) => r.arrayBuffer());
+        const data = await fetch('plantilla.pdf').then((r) => r.arrayBuffer());
         const pdf = await pdfjsLib.getDocument({ data }).promise;
         const page = await pdf.getPage(1);
         const baseViewport = page.getViewport({ scale: 1 });
@@ -178,7 +178,7 @@ export default function CalibracionPage() {
         </div>
         <div className="flex items-center gap-2">
           <SaveButton state={saveState} onClick={guardar} />
-          <a href="/plantilla.pdf" target="_blank" rel="noreferrer" className="bg-slate-600 hover:bg-slate-500 px-3 py-2 rounded-lg text-sm transition">
+          <a href="plantilla.pdf" target="_blank" rel="noreferrer" className="bg-slate-600 hover:bg-slate-500 px-3 py-2 rounded-lg text-sm transition">
             Abrir PDF
           </a>
         </div>

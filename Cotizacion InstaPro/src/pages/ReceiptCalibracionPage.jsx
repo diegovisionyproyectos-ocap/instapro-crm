@@ -4,7 +4,7 @@ import { RECIBO_CAMPOS_META } from '../utils/receiptGenerator';
 
 const SCALE = 1.5;
 const API_URL = '/api/coords?type=recibo';
-const TEMPLATE_URL = '/recibo_pago.pdf';
+const TEMPLATE_URL = 'recibo_pago.pdf';
 const DEFAULT_PAGE = { width: 595.5, height: 842.25 };
 
 export default function ReceiptCalibracionPage() {
@@ -165,7 +165,7 @@ export default function ReceiptCalibracionPage() {
         </div>
         <div className="flex items-center gap-2">
           <SaveButton state={saveState} onClick={guardar} />
-          <a href="/recibo_pago.pdf" target="_blank" rel="noreferrer" className="bg-slate-600 hover:bg-slate-500 px-3 py-2 rounded-lg text-sm transition">
+          <a href="recibo_pago.pdf" target="_blank" rel="noreferrer" className="bg-slate-600 hover:bg-slate-500 px-3 py-2 rounded-lg text-sm transition">
             Abrir PDF
           </a>
         </div>
