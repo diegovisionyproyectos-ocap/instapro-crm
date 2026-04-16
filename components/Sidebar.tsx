@@ -66,8 +66,16 @@ const nav = [
       </svg>
     ),
   },
-  {
-    href: '/configuracion',
+  {    href: '/cotizacion',
+    label: 'Cotizador',
+    icon: (
+      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8}
+          d="M12 4.5v15m7.5-7.5h-15" />
+      </svg>
+    ),
+  },
+  {    href: '/configuracion',
     label: 'Configuración',
     icon: (
       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

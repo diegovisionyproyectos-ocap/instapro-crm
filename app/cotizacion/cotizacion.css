@@ -1,0 +1,11 @@
+:root {
+  height: 100%;
+}
+
+html, body, #__next, .h-screen {
+  min-height: 100%;
+}
+
+iframe {
+  min-height: 100%;
+}
