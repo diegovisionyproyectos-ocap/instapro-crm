@@ -9,6 +9,8 @@ interface ProjectData {
   contact_email: string; // Correo electrónico
   project_description: string; // Descripción del proyecto
   area_measurement: string; // Área en metros cuadrados o lineales
+  project_city: string; // Ciudad para geolocalizar el cliente
+  project_address: string; // Dirección completa del cliente
   project_value: string; // Valor del proyecto
   tentative_date: string; // Fecha tentativa de realización
   notes: string; // Notas adicionales
@@ -20,6 +22,8 @@ const EMPTY_PROJECT: ProjectData = {
   contact_email: '',
   project_description: '',
   area_measurement: '',
+  project_city: '',
+  project_address: '',
   project_value: '',
   tentative_date: '',
   notes: ''
@@ -42,6 +46,12 @@ export default function NuevoClienteForm({ onClose }: { onClose?: () => void }) 
     setSaving(true);
     setError('');
 
+    if (!project.project_city.trim() && !project.project_address.trim()) {
+      setError('Ingresá la ciudad o dirección del cliente para mostrarlo en el mapa');
+      setSaving(false);
+      return;
+    }
+
     try {
       // Crear el contacto primero
       const cRes = await fetch('/api/contacts', {
@@ -52,8 +62,8 @@ export default function NuevoClienteForm({ onClose }: { onClose?: () => void }) 
           phone: project.contact_phone.trim(),
           email: project.contact_email.trim(),
           company: '',
-          city: '',
-          address: '',
+          city: project.project_city.trim() || null,
+          address: project.project_address.trim() || null,
           status: 'prospect',
         }),
       });
@@ -177,6 +187,19 @@ export default function NuevoClienteForm({ onClose }: { onClose?: () => void }) 
                 <label className={lbl}>Correo electrónico</label>
                 <input type="email" placeholder="email@cliente.com"
                   value={project.contact_email} onChange={e => setP('contact_email', e.target.value)} className={inp} />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className={lbl}>Ciudad *</label>
+                <input required placeholder="Buenos Aires"
+                  value={project.project_city} onChange={e => setP('project_city', e.target.value)} className={inp} />
+              </div>
+              <div>
+                <label className={lbl}>Dirección</label>
+                <input placeholder="Av. Corrientes 1234, CABA"
+                  value={project.project_address} onChange={e => setP('project_address', e.target.value)} className={inp} />
               </div>
             </div>
 
