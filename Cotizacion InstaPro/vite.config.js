@@ -92,5 +92,6 @@ function coordsPlugin() {
 }
 
 export default defineConfig({
+  base: './',
   plugins: [react(), coordsPlugin()],
 });
