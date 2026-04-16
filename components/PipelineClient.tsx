@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import type { Deal, DealStage } from '@/lib/types';
+import type { Deal, DealStage, Project } from '@/lib/types';
 import NuevoClienteForm from './NuevoClienteForm';
 
 const STAGES: {
@@ -179,7 +179,9 @@ export default function PipelineClient() {
     // Find the project linked to this deal
     const res = await fetch('/api/projects');
     const projects = await res.json();
-    const proj = Array.isArray(projects) ? projects.find((p: any) => p.deal_id === deal.id) : null;
+    const proj = Array.isArray(projects)
+      ? (projects as Project[]).find((project) => project.deal_id === deal.id)
+      : null;
     if (proj) {
       router.push(`/proyectos/${proj.id}`);
     } else {
@@ -193,10 +195,6 @@ export default function PipelineClient() {
       if (d.project_id) router.push(`/proyectos/${d.project_id}`);
     }
   }
-
-  const totalFollowing = deals
-    .filter((d) => d.stage === 'following')
-    .reduce((s, d) => s + d.value, 0);
 
   const totalWon = deals
     .filter((d) => d.stage === 'won')

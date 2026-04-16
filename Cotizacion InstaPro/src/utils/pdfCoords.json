@@ -1,0 +1,101 @@
+{
+  "fechaEmision": {
+    "x": 460,
+    "y": 669
+  },
+  "validaHasta": {
+    "x": 461,
+    "y": 651
+  },
+  "vendedor": {
+    "x": 461,
+    "y": 634
+  },
+  "clienteNombre": {
+    "x": 141,
+    "y": 632
+  },
+  "clienteDireccion": {
+    "x": 142,
+    "y": 617
+  },
+  "clienteTelefono": {
+    "x": 138,
+    "y": 602
+  },
+  "clienteCorreo": {
+    "x": 131,
+    "y": 587
+  },
+  "clienteNRC": {
+    "x": 116,
+    "y": 573
+  },
+  "item1": {
+    "x": 97,
+    "y": 489
+  },
+  "item2": {
+    "x": 97,
+    "y": 456
+  },
+  "item3": {
+    "x": 97,
+    "y": 421
+  },
+  "item4": {
+    "x": 97,
+    "y": 385
+  },
+  "itemCantRX": 337,
+  "itemPriceRX": 445,
+  "itemPriceCX": 436,
+  "itemSubRX": 533,
+  "subtotalR": {
+    "x": 518,
+    "y": 333
+  },
+  "descuentoMontoR": {
+    "x": 518,
+    "y": 305
+  },
+  "subtotalDescR": {
+    "x": 518,
+    "y": 283
+  },
+  "ivaR": {
+    "x": 517,
+    "y": 259
+  },
+  "totalR": {
+    "x": 517,
+    "y": 232
+  },
+  "descuentoLabel": {
+    "x": 438,
+    "y": 304
+  },
+  "firmaNombre": {
+    "x": 423,
+    "y": 181
+  },
+  "firmaNombreLeft": {
+    "x": 319,
+    "y": 179
+  },
+  "firmaNombreRight": {
+    "x": 542,
+    "y": 178
+  },
+  "firmaFecha": {
+    "x": 470,
+    "y": 125
+  },
+  "firmaImagen": {
+    "x": 328,
+    "y": 105,
+    "w": 205,
+    "h": 58
+  },
+  "_adjustmentY": 5.8
+}

@@ -4,15 +4,18 @@ Run: python scripts/create_admin_user.py
 """
 import urllib.request, urllib.error, json, os
 
+# For InstaPro: project ref is fxltjwqsveaukiivddaj
 TOKEN = os.environ.get("SUPABASE_ACCESS_TOKEN", "sbp_b08dede11cc03410747a60999556c2a3c7d3a4e7")
-PROJECT_REF = os.environ.get("SUPABASE_PROJECT_REF", "")
+PROJECT_REF = os.environ.get("SUPABASE_PROJECT_REF", "fxltjwqsveaukiivddaj")
 
-if not PROJECT_REF:
-    print("ERROR: Set SUPABASE_PROJECT_REF env variable")
-    PROJECT_REF = input("Enter project ref: ").strip()
+USERNAME = "diego_sv"
+EMAIL = f"{USERNAME}@instapro-crm.local"
+PASSWORD = "InstD37%"
 
-EMAIL = "diego.visionyproyectos@gmail.com"
-PASSWORD = input(f"Set password for {EMAIL}: ").strip()
+print(f"Creating super admin user...")
+print(f"  Username: {USERNAME}")
+print(f"  Email: {EMAIL}")
+print(f"  Password: {'*' * len(PASSWORD)}")
 
 if len(PASSWORD) < 8:
     print("Password must be at least 8 characters")
@@ -24,6 +27,10 @@ payload = {
     "email": EMAIL,
     "password": PASSWORD,
     "email_confirm": True,
+    "user_metadata": {
+        "username": USERNAME,
+        "role": "super_admin"
+    }
 }
 
 data = json.dumps(payload).encode()
@@ -40,12 +47,13 @@ req = urllib.request.Request(
 try:
     with urllib.request.urlopen(req) as r:
         result = json.loads(r.read().decode())
-        print(f"✓ Admin user created!")
-        print(f"  Email: {result.get('email')}")
+        print(f"\n✅ Admin user created successfully!")
         print(f"  ID: {result.get('id')}")
-        print(f"\nLogin at /login with:")
+        print(f"  Email: {result.get('email')}")
+        print(f"\n🔐 Login credentials:")
+        print(f"  Username (for reference): {USERNAME}")
         print(f"  Email: {EMAIL}")
-        print(f"  Password: (what you just entered)")
+        print(f"  Password: InstD37%")
 except urllib.error.HTTPError as e:
     body = e.read().decode()
     print(f"✗ HTTP {e.code}: {body}")

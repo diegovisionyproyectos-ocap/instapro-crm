@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import type { Project, ProjectPhase, ChecklistItem, ProjectEvent, PhaseType, PhaseStatus, EventType, ProjectStatus } from '@/lib/types';
 import { PHASE_LABELS, PHASE_ORDER } from '@/lib/projectDefaults';
@@ -312,7 +312,7 @@ export default function ProjectDetailClient({ id }: { id: string }) {
   const [editing, setEditing] = useState(false);
   const [editForm, setEditForm] = useState({ name: '', installer_name: '', address: '', notes: '', status: 'active' as ProjectStatus });
 
-  const load = useCallback(async () => {
+  async function load() {
     const [pRes, eRes] = await Promise.all([
       fetch(`/api/projects/${id}`),
       fetch(`/api/projects/${id}/events`),
@@ -333,9 +333,42 @@ export default function ProjectDetailClient({ id }: { id: string }) {
     }
     setEvents(Array.isArray(e) ? e : []);
     setLoading(false);
-  }, [id]);
+  }
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    let active = true;
+
+    async function hydrate() {
+      const [pRes, eRes] = await Promise.all([
+        fetch(`/api/projects/${id}`),
+        fetch(`/api/projects/${id}/events`),
+      ]);
+      const [p, e] = await Promise.all([pRes.json(), eRes.json()]);
+      if (!active) return;
+
+      if (p && !p.error) {
+        setProject(p);
+        setEditForm({
+          name: p.name || '',
+          installer_name: p.installer_name || '',
+          address: p.address || '',
+          notes: p.notes || '',
+          status: p.status || 'active',
+        });
+        const activePhaseRecord = (p.phases || []).find((ph: ProjectPhase) => ph.status === 'in_progress');
+        if (activePhaseRecord) setActivePhase(activePhaseRecord.phase_type);
+      }
+
+      setEvents(Array.isArray(e) ? e : []);
+      setLoading(false);
+    }
+
+    void hydrate();
+
+    return () => {
+      active = false;
+    };
+  }, [id]);
 
   async function updatePhaseStatus(phaseId: string, status: PhaseStatus) {
     await fetch(`/api/projects/${id}/phases/${phaseId}`, {

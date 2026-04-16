@@ -1,0 +1,108 @@
+{
+  "fechaEmision": {
+    "x": 407,
+    "y": 270
+  },
+  "vendedor": {
+    "x": 385,
+    "y": 259.6
+  },
+  "clienteNombre": {
+    "x": 58,
+    "y": 277
+  },
+  "clienteDireccion": {
+    "x": 61,
+    "y": 265.5
+  },
+  "clienteTelefono": {
+    "x": 59,
+    "y": 254
+  },
+  "clienteCorreo": {
+    "x": 56,
+    "y": 242.9
+  },
+  "clienteNRC": {
+    "x": 50,
+    "y": 231
+  },
+  "item1": {
+    "x": 56,
+    "y": 200
+  },
+  "item2": {
+    "x": 56,
+    "y": 186
+  },
+  "item3": {
+    "x": 56,
+    "y": 168
+  },
+  "itemCantidad": {
+    "x": 292,
+    "y": 200
+  },
+  "itemPrecio": {
+    "x": 352,
+    "y": 200
+  },
+  "itemAnticipo": {
+    "x": 419,
+    "y": 200
+  },
+  "itemCantRX": 375,
+  "itemPrecioRX": 470,
+  "itemAnticipoRX": 558,
+  "subtotalR": {
+    "x": 420,
+    "y": 149
+  },
+  "anticipoR": {
+    "x": 420,
+    "y": 137
+  },
+  "valorPendienteR": {
+    "x": 420,
+    "y": 125
+  },
+  "totalR": {
+    "x": 420,
+    "y": 114
+  },
+  "fechaInstalacion": {
+    "x": 99,
+    "y": 112
+  },
+  "horaAsignada": {
+    "x": 85,
+    "y": 101
+  },
+  "ubicacionServicio": {
+    "x": 103,
+    "y": 89
+  },
+  "firmaNombreLeft": {
+    "x": 273,
+    "y": 90
+  },
+  "firmaNombreRight": {
+    "x": 457,
+    "y": 89
+  },
+  "firmaNombre": {
+    "x": 352,
+    "y": 91
+  },
+  "firmaFecha": {
+    "x": 427,
+    "y": 57
+  },
+  "firmaImagen": {
+    "x": 260,
+    "y": 35,
+    "w": 220,
+    "h": 70
+  },
+  "_adjustmentY": 6
+}
