@@ -117,7 +117,7 @@ export default function NuevoClienteForm({ onClose }: { onClose?: () => void }) 
               {step === 2 && 'Proyecto creado correctamente'}
             </p>
           </div>
-          {onClose && step !== 3 && (
+          {onClose && step === 1 && (
             <button onClick={onClose} className="text-slate-300 hover:text-slate-500 transition-colors">
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
