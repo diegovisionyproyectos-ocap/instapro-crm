@@ -2,282 +2,368 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import type { ContactStatus } from '@/lib/types';
 
-interface ProjectData {
-  client_name: string; // Nombre del cliente o encargado
-  contact_phone: string; // Contacto telefónico
-  contact_email: string; // Correo electrónico
-  project_description: string; // Descripción del proyecto
-  area_measurement: string; // Área en metros cuadrados o lineales
-  project_city: string; // Ciudad para geolocalizar el cliente
-  project_address: string; // Dirección completa del cliente
-  project_value: string; // Valor del proyecto
-  tentative_date: string; // Fecha tentativa de realización
-  notes: string; // Notas adicionales
+type ClientMode = 'person' | 'company';
+type CompanyRelation = 'none' | 'belongs';
+
+interface ContactFormState {
+  mode: ClientMode;
+  relation: CompanyRelation;
+  name: string;
+  email: string;
+  phone: string;
+  company: string;
+  city: string;
+  address: string;
+  status: ContactStatus;
 }
 
-const EMPTY_PROJECT: ProjectData = {
-  client_name: '',
-  contact_phone: '',
-  contact_email: '',
-  project_description: '',
-  area_measurement: '',
-  project_city: '',
-  project_address: '',
-  project_value: '',
-  tentative_date: '',
-  notes: ''
+const EMPTY_CONTACT: ContactFormState = {
+  mode: 'person',
+  relation: 'none',
+  name: '',
+  email: '',
+  phone: '',
+  company: '',
+  city: '',
+  address: '',
+  status: 'prospect',
 };
+
+const STATUS_OPTIONS: { value: ContactStatus; label: string }[] = [
+  { value: 'lead', label: 'Lead' },
+  { value: 'prospect', label: 'Prospecto' },
+  { value: 'customer', label: 'Cliente' },
+  { value: 'inactive', label: 'Inactivo' },
+];
 
 export default function NuevoClienteForm({ onClose }: { onClose?: () => void }) {
   const router = useRouter();
-  const [project, setProject] = useState<ProjectData>(EMPTY_PROJECT);
-  const [step, setStep] = useState<1 | 2>(1);
-  const [createdContact, setCreatedContact] = useState<{ id: string; client_code: string; name: string } | null>(null);
+  const [form, setForm] = useState<ContactFormState>(EMPTY_CONTACT);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [createdContact, setCreatedContact] = useState<{ id: string; client_code: string; name: string } | null>(null);
 
-  function setP(field: keyof ProjectData, value: string) {
-    setProject(f => ({ ...f, [field]: value }));
+  const inputClass = 'w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-800 placeholder:text-slate-400 focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-200 transition';
+  const labelClass = 'mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-600';
+
+  function patch<K extends keyof ContactFormState>(key: K, value: ContactFormState[K]) {
+    setForm((current) => ({ ...current, [key]: value }));
   }
 
-  async function handleProjectSubmit(e: React.FormEvent) {
+  function relationLabel() {
+    if (form.mode === 'company') return 'Razón social o nombre comercial *';
+    return 'Nombre completo del cliente *';
+  }
+
+  function relationHelp() {
+    if (form.mode === 'company') return 'Este expediente será una empresa como cliente principal.';
+    if (form.relation === 'belongs') return 'Puedes vincular este cliente a una empresa sin perder sus datos personales.';
+    return 'Este expediente será una persona sin empresa asociada.';
+  }
+
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setSaving(true);
     setError('');
 
-    if (!project.project_city.trim() && !project.project_address.trim()) {
-      setError('Ingresá la ciudad o dirección del cliente para mostrarlo en el mapa');
+    const payload = {
+      name: form.name.trim(),
+      email: form.email.trim(),
+      phone: form.phone.trim(),
+      company: form.mode === 'company'
+        ? form.name.trim()
+        : form.relation === 'belongs'
+          ? form.company.trim()
+          : '',
+      city: form.city.trim(),
+      address: form.address.trim() || null,
+      status: form.status,
+    };
+
+    if (!payload.name || !payload.phone || !payload.city) {
+      setError('Completa nombre, teléfono y ciudad para crear el cliente.');
       setSaving(false);
       return;
     }
 
     try {
-      // Crear el contacto primero
-      const cRes = await fetch('/api/contacts', {
+      const response = await fetch('/api/contacts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: project.client_name.trim(),
-          phone: project.contact_phone.trim(),
-          email: project.contact_email.trim(),
-          company: '',
-          city: project.project_city.trim() || null,
-          address: project.project_address.trim() || null,
-          status: 'prospect',
-        }),
+        body: JSON.stringify(payload),
       });
-      const contact = await cRes.json();
-      if (!cRes.ok || contact.error) throw new Error(contact.error || 'Error al crear cliente');
+      const result = await response.json();
+      if (!response.ok || result.error) {
+        throw new Error(result.error || 'No se pudo crear el cliente.');
+      }
 
-      // Crear el proyecto/deal
-      const dRes = await fetch('/api/deals', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          title: project.project_description.trim() || `Proyecto - ${project.client_name}`,
-          contact_id: contact.id,
-          contact_name: project.client_name,
-          stage: 'following',
-          value: parseFloat(project.project_value) || 0,
-          close_date: project.tentative_date || new Date(Date.now() + 30 * 86400000).toISOString().split('T')[0],
-          notes: `Área: ${project.area_measurement}\n${project.notes}`.trim(),
-        }),
+      setCreatedContact({
+        id: result.id,
+        client_code: result.client_code,
+        name: result.name,
       });
-      const deal = await dRes.json();
-      if (!dRes.ok || deal.error) throw new Error(deal.error || 'Error al crear proyecto');
-
-      setCreatedContact({ id: contact.id, client_code: contact.client_code, name: project.client_name });
-      setStep(2);
-    } catch (err: any) {
-      setError(err.message || 'Error inesperado');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Ocurrió un error inesperado.');
     } finally {
       setSaving(false);
     }
   }
 
-  function handleGoToExpediente() {
+  function goToExpediente(withProject = false) {
     if (!createdContact) return;
     onClose?.();
-    router.push(`/contacts/${createdContact.id}`);
+    const suffix = withProject ? '?newProject=1' : '';
+    router.push(`/contacts/${createdContact.id}${suffix}`);
   }
-
-  function handleGoToPipeline() {
-    onClose?.();
-    router.push('/pipeline');
-  }
-
-  const inp = 'w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 placeholder-slate-300 transition';
-  const lbl = 'block text-xs font-semibold text-slate-500 mb-1.5 uppercase tracking-wide';
-
-  const steps = [
-    { n: 1, label: 'Proyecto' },
-    { n: 2, label: 'Listo' },
-  ];
 
   return (
-    <div className="bg-white rounded-2xl shadow-xl border border-slate-100 w-full max-w-lg mx-auto">
-      {/* Header */}
-      <div className="px-7 pt-6 pb-4 border-b border-slate-100">
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-xl font-bold text-slate-900">Nuevo Proyecto</h2>
-            <p className="text-slate-400 text-sm mt-0.5">
-              {step === 1 && 'Registrá los datos del proyecto y cliente'}
-              {step === 2 && 'Proyecto creado correctamente'}
-            </p>
-          </div>
-          {onClose && step === 1 && (
-            <button onClick={onClose} className="text-slate-300 hover:text-slate-500 transition-colors">
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-          )}
+    <div className="mx-auto w-full max-w-2xl rounded-2xl border border-slate-200 bg-white shadow-2xl">
+      <div className="flex items-start justify-between border-b border-slate-100 px-7 py-6">
+        <div>
+          <h2 className="text-2xl font-bold text-slate-900">Nuevo cliente</h2>
+          <p className="mt-1 text-sm text-slate-500">
+            Registra primero el expediente del cliente y luego, si quieres, creamos su proyecto con los datos ya vinculados.
+          </p>
         </div>
-
-        {/* Step indicator */}
-        <div className="flex items-center gap-2 mt-4">
-          {steps.map((s, i) => (
-            <div key={s.n} className="flex items-center gap-2">
-              <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-all ${
-                step === s.n ? 'bg-indigo-600 text-white' :
-                s.n < step ? 'bg-emerald-500 text-white' : 'bg-slate-100 text-slate-400'
-              }`}>
-                {s.n < step ? '✓' : s.n}
-              </div>
-              <span className={`text-xs font-medium ${step === s.n ? 'text-slate-700' : 'text-slate-400'}`}>
-                {s.label}
-              </span>
-              {i < steps.length - 1 && <div className="w-6 h-px bg-slate-200" />}
-            </div>
-          ))}
-        </div>
+        {onClose && !createdContact && (
+          <button
+            onClick={onClose}
+            className="flex h-9 w-9 items-center justify-center rounded-full text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700"
+          >
+            <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        )}
       </div>
 
-      {/* Step 1 — Project data */}
-      {step === 1 && (
-        <form onSubmit={handleProjectSubmit}>
-          <div className="px-7 py-6 space-y-4">
-            <div className="bg-indigo-50 rounded-xl px-4 py-3 flex items-center gap-3">
-              <div className="w-8 h-8 rounded-lg bg-indigo-100 flex items-center justify-center shrink-0">
-                <svg className="w-4 h-4 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                    d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                </svg>
-              </div>
-              <p className="text-xs text-indigo-700 font-medium">
-                Al crear el proyecto se genera automáticamente el <strong>cliente</strong> y su <strong>código único de expediente</strong> (CLI-XXXX) que vincula todos sus proyectos.
-              </p>
-            </div>
-
-            <div>
-              <label className={lbl}>Nombre del cliente o encargado *</label>
-              <input required autoFocus placeholder="Ej. Juan Pérez o María García (Encargada)"
-                value={project.client_name} onChange={e => setP('client_name', e.target.value)} className={inp} />
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className={lbl}>Teléfono de contacto *</label>
-                <input required placeholder="+54 11 1234-5678"
-                  value={project.contact_phone} onChange={e => setP('contact_phone', e.target.value)} className={inp} />
-              </div>
-              <div>
-                <label className={lbl}>Correo electrónico</label>
-                <input type="email" placeholder="email@cliente.com"
-                  value={project.contact_email} onChange={e => setP('contact_email', e.target.value)} className={inp} />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className={lbl}>Ciudad *</label>
-                <input required placeholder="Buenos Aires"
-                  value={project.project_city} onChange={e => setP('project_city', e.target.value)} className={inp} />
-              </div>
-              <div>
-                <label className={lbl}>Dirección</label>
-                <input placeholder="Av. Corrientes 1234, CABA"
-                  value={project.project_address} onChange={e => setP('project_address', e.target.value)} className={inp} />
-              </div>
-            </div>
-
-            <div>
-              <label className={lbl}>Descripción del proyecto *</label>
-              <textarea required rows={2} placeholder="Ej. Instalación eléctrica completa en edificio de 3 pisos, incluyendo tableros principales y circuitos secundarios"
-                value={project.project_description} onChange={e => setP('project_description', e.target.value)}
-                className={inp + ' resize-none'} />
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className={lbl}>Área / Medida (m² o lineales)</label>
-                <input placeholder="Ej. 150 m² o 200 lineales"
-                  value={project.area_measurement} onChange={e => setP('area_measurement', e.target.value)} className={inp} />
-              </div>
-              <div>
-                <label className={lbl}>Valor estimado del proyecto ($)</label>
-                <input type="number" min="0" placeholder="0"
-                  value={project.project_value} onChange={e => setP('project_value', e.target.value)} className={inp} />
-              </div>
-            </div>
-
-            <div>
-              <label className={lbl}>Fecha tentativa de realización</label>
-              <input type="date" value={project.tentative_date} onChange={e => setP('tentative_date', e.target.value)} className={inp} />
-            </div>
-
-            <div>
-              <label className={lbl}>Notas adicionales</label>
-              <textarea rows={2} placeholder="Detalles adicionales, requerimientos especiales, observaciones..."
-                value={project.notes} onChange={e => setP('notes', e.target.value)}
-                className={inp + ' resize-none'} />
-            </div>
-
-            {error && (
-              <div className="bg-red-50 text-red-600 text-sm px-4 py-2.5 rounded-xl border border-red-100">{error}</div>
-            )}
+      {!createdContact ? (
+        <form onSubmit={handleSubmit} className="px-7 py-6">
+          <div className="mb-5 rounded-2xl border border-indigo-100 bg-indigo-50 px-4 py-4">
+            <p className="text-sm font-semibold text-indigo-800">Flujo recomendado</p>
+            <p className="mt-1 text-sm text-indigo-700">
+              1. Creas el cliente o empresa.
+              2. Se genera su expediente único.
+              3. Desde el expediente puedes abrir el formulario de proyecto sin volver a escribir los datos del cliente.
+            </p>
           </div>
-          <div className="px-7 pb-6">
-            <button type="submit" disabled={saving}
-              className="w-full bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl py-2.5 text-sm font-bold transition-colors disabled:opacity-50 shadow-sm">
-              {saving ? 'Creando proyecto...' : 'Crear proyecto →'}
+
+          <div className="mb-5 grid gap-3 md:grid-cols-2">
+            <button
+              type="button"
+              onClick={() => patch('mode', 'person')}
+              className={`rounded-2xl border px-4 py-4 text-left transition-colors ${
+                form.mode === 'person'
+                  ? 'border-indigo-300 bg-indigo-50'
+                  : 'border-slate-200 bg-white hover:border-slate-300'
+              }`}
+            >
+              <p className="text-sm font-semibold text-slate-900">Persona</p>
+              <p className="mt-1 text-xs text-slate-500">Cliente individual, encargado o contacto principal.</p>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setForm((current) => ({
+                  ...current,
+                  mode: 'company',
+                  relation: 'none',
+                  company: '',
+                }));
+              }}
+              className={`rounded-2xl border px-4 py-4 text-left transition-colors ${
+                form.mode === 'company'
+                  ? 'border-indigo-300 bg-indigo-50'
+                  : 'border-slate-200 bg-white hover:border-slate-300'
+              }`}
+            >
+              <p className="text-sm font-semibold text-slate-900">Empresa</p>
+              <p className="mt-1 text-xs text-slate-500">El cliente principal será una razón social o nombre comercial.</p>
+            </button>
+          </div>
+
+          {form.mode === 'person' && (
+            <div className="mb-5">
+              <label className={labelClass}>¿Este cliente pertenece a una empresa?</label>
+              <div className="grid gap-3 md:grid-cols-2">
+                <button
+                  type="button"
+                  onClick={() => patch('relation', 'none')}
+                  className={`rounded-2xl border px-4 py-3 text-left transition-colors ${
+                    form.relation === 'none'
+                      ? 'border-indigo-300 bg-indigo-50'
+                      : 'border-slate-200 bg-white hover:border-slate-300'
+                  }`}
+                >
+                  <p className="text-sm font-semibold text-slate-900">No</p>
+                  <p className="mt-1 text-xs text-slate-500">Es un cliente individual.</p>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => patch('relation', 'belongs')}
+                  className={`rounded-2xl border px-4 py-3 text-left transition-colors ${
+                    form.relation === 'belongs'
+                      ? 'border-indigo-300 bg-indigo-50'
+                      : 'border-slate-200 bg-white hover:border-slate-300'
+                  }`}
+                >
+                  <p className="text-sm font-semibold text-slate-900">Sí</p>
+                  <p className="mt-1 text-xs text-slate-500">Guardar también la empresa a la que pertenece.</p>
+                </button>
+              </div>
+            </div>
+          )}
+
+          <div className="mb-5 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+            <p className="text-sm font-medium text-slate-700">{relationHelp()}</p>
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="md:col-span-2">
+              <label className={labelClass}>{relationLabel()}</label>
+              <input
+                required
+                autoFocus
+                value={form.name}
+                onChange={(e) => patch('name', e.target.value)}
+                placeholder={form.mode === 'company' ? 'Ej. InstaPro Constructora S.A.' : 'Ej. Carlos Nunfio'}
+                className={inputClass}
+              />
+            </div>
+
+            {form.mode === 'person' && form.relation === 'belongs' && (
+              <div className="md:col-span-2">
+                <label className={labelClass}>Empresa asociada *</label>
+                <input
+                  required
+                  value={form.company}
+                  onChange={(e) => patch('company', e.target.value)}
+                  placeholder="Ej. Grupo Instrapro"
+                  className={inputClass}
+                />
+              </div>
+            )}
+
+            <div>
+              <label className={labelClass}>Teléfono *</label>
+              <input
+                required
+                value={form.phone}
+                onChange={(e) => patch('phone', e.target.value)}
+                placeholder="+503 0000-0000"
+                className={inputClass}
+              />
+            </div>
+
+            <div>
+              <label className={labelClass}>Correo electrónico</label>
+              <input
+                type="email"
+                value={form.email}
+                onChange={(e) => patch('email', e.target.value)}
+                placeholder="correo@cliente.com"
+                className={inputClass}
+              />
+            </div>
+
+            <div>
+              <label className={labelClass}>Ciudad *</label>
+              <input
+                required
+                value={form.city}
+                onChange={(e) => patch('city', e.target.value)}
+                placeholder="Ej. Mejicanos"
+                className={inputClass}
+              />
+            </div>
+
+            <div>
+              <label className={labelClass}>Estado del cliente</label>
+              <select
+                value={form.status}
+                onChange={(e) => patch('status', e.target.value as ContactStatus)}
+                className={inputClass}
+              >
+                {STATUS_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="md:col-span-2">
+              <label className={labelClass}>Dirección</label>
+              <input
+                value={form.address}
+                onChange={(e) => patch('address', e.target.value)}
+                placeholder="Colonia, calle, número de casa o ubicación de referencia"
+                className={inputClass}
+              />
+            </div>
+
+          </div>
+
+          {error && (
+            <div className="mt-5 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+              {error}
+            </div>
+          )}
+
+          <div className="mt-6 flex gap-3">
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex-1 rounded-xl border border-slate-300 py-3 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50"
+            >
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              disabled={saving}
+              className="flex-1 rounded-xl bg-indigo-600 py-3 text-sm font-bold text-white transition-colors hover:bg-indigo-700 disabled:opacity-50"
+            >
+              {saving ? 'Guardando cliente...' : 'Crear cliente'}
             </button>
           </div>
         </form>
-      )}
+      ) : (
+        <div className="px-7 py-8">
+          <div className="mb-6 flex items-center gap-4 rounded-2xl border border-emerald-200 bg-emerald-50 px-5 py-4">
+            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-emerald-500 text-white">
+              <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+              </svg>
+            </div>
+            <div>
+              <h3 className="text-lg font-bold text-emerald-900">Cliente creado correctamente</h3>
+              <p className="text-sm text-emerald-800">
+                Ya se generó el expediente <span className="font-mono font-bold">{createdContact.client_code}</span> para {createdContact.name}.
+              </p>
+            </div>
+          </div>
 
-      {/* Step 2 — Done */}
-      {step === 2 && createdContact && (
-        <div className="px-7 py-8 text-center">
-          <div className="w-16 h-16 rounded-full bg-emerald-100 flex items-center justify-center mx-auto mb-4">
-            <svg className="w-8 h-8 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-            </svg>
+          <div className="mb-6 rounded-2xl border border-slate-200 bg-slate-50 px-5 py-4">
+            <p className="text-sm font-semibold text-slate-800">¿Harás un proyecto para este cliente ahora?</p>
+            <p className="mt-1 text-sm text-slate-600">
+              Si eliges que sí, te llevaré al expediente con el formulario de proyecto ya vinculado a este cliente o empresa.
+            </p>
           </div>
-          <h3 className="text-lg font-bold text-slate-800 mb-1">Proyecto creado exitosamente</h3>
-          <div className="bg-slate-50 rounded-xl px-4 py-3 mb-4">
-            <p className="text-sm text-slate-600 mb-1"><strong>Cliente:</strong> {createdContact.name}</p>
-            <p className="text-sm text-slate-600 mb-1"><strong>Proyecto:</strong> {project.project_description}</p>
-            {project.area_measurement && <p className="text-sm text-slate-600 mb-1"><strong>Área:</strong> {project.area_measurement}</p>}
-            {project.project_value && <p className="text-sm text-slate-600"><strong>Valor:</strong> ${parseFloat(project.project_value).toLocaleString('es-AR')}</p>}
-          </div>
-          <div className="inline-flex items-center gap-2 bg-indigo-50 border border-indigo-200 rounded-xl px-4 py-2 mb-5">
-            <span className="text-xs text-indigo-500 font-medium">Código de expediente</span>
-            <span className="text-indigo-700 font-bold font-mono text-base">{createdContact.client_code}</span>
-          </div>
-          <p className="text-slate-500 text-sm mb-6">
-            Desde el expediente del cliente podés ver todos sus proyectos, eventos y el historial completo.
-          </p>
-          <div className="flex gap-3">
-            <button onClick={handleGoToPipeline}
-              className="flex-1 border border-slate-200 text-slate-600 rounded-xl py-2.5 text-sm font-semibold hover:bg-slate-50 transition-colors">
-              Ver pipeline
+
+          <div className="flex flex-col gap-3 md:flex-row">
+            <button
+              onClick={() => goToExpediente(false)}
+              className="flex-1 rounded-xl border border-slate-300 py-3 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50"
+            >
+              No, solo ir al expediente
             </button>
-            <button onClick={handleGoToExpediente}
-              className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl py-2.5 text-sm font-bold transition-colors shadow-sm">
-              Ver expediente →
+            <button
+              onClick={() => goToExpediente(true)}
+              className="flex-1 rounded-xl bg-indigo-600 py-3 text-sm font-bold text-white transition-colors hover:bg-indigo-700"
+            >
+              Sí, crear proyecto ahora
             </button>
           </div>
         </div>
@@ -285,3 +371,4 @@ export default function NuevoClienteForm({ onClose }: { onClose?: () => void }) 
     </div>
   );
 }
+

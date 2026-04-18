@@ -13,20 +13,28 @@ const STATUS_LABELS: Record<ContactStatus, string> = {
 };
 
 const STATUS_COLORS: Record<ContactStatus, string> = {
-  lead: 'bg-blue-50 text-blue-600 border border-blue-100',
-  prospect: 'bg-amber-50 text-amber-600 border border-amber-100',
-  customer: 'bg-emerald-50 text-emerald-600 border border-emerald-100',
-  inactive: 'bg-slate-50 text-slate-500 border border-slate-100',
+  lead: 'border border-blue-100 bg-blue-50 text-blue-600',
+  prospect: 'border border-amber-100 bg-amber-50 text-amber-600',
+  customer: 'border border-emerald-100 bg-emerald-50 text-emerald-600',
+  inactive: 'border border-slate-100 bg-slate-50 text-slate-500',
 };
 
 const AVATAR_COLORS = ['bg-indigo-500', 'bg-violet-500', 'bg-pink-500', 'bg-emerald-500', 'bg-orange-500', 'bg-cyan-500'];
 
-const EMPTY_FORM = { name: '', email: '', phone: '', company: '', city: '', status: 'lead' as ContactStatus };
+const EMPTY_FORM = {
+  name: '',
+  email: '',
+  phone: '',
+  company: '',
+  city: '',
+  address: '',
+  status: 'lead' as ContactStatus,
+};
 
 function Avatar({ name, idx }: { name: string; idx: number }) {
-  const initials = name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
+  const initials = name.split(' ').map((word) => word[0]).join('').slice(0, 2).toUpperCase();
   return (
-    <div className={`w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold text-white shrink-0 ${AVATAR_COLORS[idx % AVATAR_COLORS.length]}`}>
+    <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white ${AVATAR_COLORS[idx % AVATAR_COLORS.length]}`}>
       {initials}
     </div>
   );
@@ -42,12 +50,14 @@ export default function ContactsClient() {
   const [form, setForm] = useState(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
 
+  const inputClass = 'w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-800 placeholder:text-slate-400 focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-200 transition';
+
   async function load() {
     setLoading(true);
     try {
-      const res = await fetch('/api/contacts');
-      const data = await res.json();
-      setContacts(Array.isArray(data) ? data : []);
+      const response = await fetch('/api/contacts');
+      const result = await response.json();
+      setContacts(Array.isArray(result) ? result : []);
     } catch {
       setContacts([]);
     } finally {
@@ -55,7 +65,9 @@ export default function ContactsClient() {
     }
   }
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    load();
+  }, []);
 
   function openNew() {
     setEditing(null);
@@ -70,6 +82,7 @@ export default function ContactsClient() {
       phone: contact.phone,
       company: contact.company,
       city: contact.city || '',
+      address: contact.address || '',
       status: contact.status,
     });
     setShowModal(true);
@@ -78,6 +91,7 @@ export default function ContactsClient() {
   async function handleSubmit(e: React.SyntheticEvent) {
     e.preventDefault();
     if (!editing) return;
+
     setSaving(true);
     await fetch(`/api/contacts/${editing.id}`, {
       method: 'PUT',
@@ -96,135 +110,138 @@ export default function ContactsClient() {
     load();
   }
 
-  const filtered = contacts.filter((c) => {
+  const filtered = contacts.filter((contact) => {
+    const query = search.toLowerCase();
     const matchSearch =
-      c.name.toLowerCase().includes(search.toLowerCase()) ||
-      c.company.toLowerCase().includes(search.toLowerCase()) ||
-      c.email.toLowerCase().includes(search.toLowerCase()) ||
-      (c.city || '').toLowerCase().includes(search.toLowerCase()) ||
-      (c.client_code || '').toLowerCase().includes(search.toLowerCase());
-    const matchStatus = filterStatus === 'all' || c.status === filterStatus;
+      contact.name.toLowerCase().includes(query) ||
+      contact.company.toLowerCase().includes(query) ||
+      contact.email.toLowerCase().includes(query) ||
+      (contact.city || '').toLowerCase().includes(query) ||
+      (contact.client_code || '').toLowerCase().includes(query);
+
+    const matchStatus = filterStatus === 'all' || contact.status === filterStatus;
     return matchSearch && matchStatus;
   });
 
   const counts = {
     all: contacts.length,
-    lead: contacts.filter(c => c.status === 'lead').length,
-    prospect: contacts.filter(c => c.status === 'prospect').length,
-    customer: contacts.filter(c => c.status === 'customer').length,
-    inactive: contacts.filter(c => c.status === 'inactive').length,
+    lead: contacts.filter((contact) => contact.status === 'lead').length,
+    prospect: contacts.filter((contact) => contact.status === 'prospect').length,
+    customer: contacts.filter((contact) => contact.status === 'customer').length,
+    inactive: contacts.filter((contact) => contact.status === 'inactive').length,
   };
 
   return (
     <div className="max-w-6xl">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="mb-6 flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Clientes</h1>
-          <p className="text-slate-500 mt-1">{contacts.length} expedientes registrados</p>
+          <h1 className="text-3xl font-bold tracking-tight text-slate-900">Clientes</h1>
+          <p className="mt-1 text-slate-500">{contacts.length} expedientes registrados</p>
         </div>
         <button
           onClick={openNew}
-          className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold px-5 py-2.5 rounded-xl transition-colors shadow-sm"
+          className="flex items-center gap-2 rounded-xl bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-indigo-700"
         >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
           </svg>
           Nuevo cliente
         </button>
       </div>
 
-      {/* Filter tabs */}
-      <div className="flex items-center gap-2 mb-4 flex-wrap">
-        {(['all', 'customer', 'prospect', 'lead', 'inactive'] as const).map((s) => (
+      <div className="mb-4 flex flex-wrap items-center gap-2">
+        {(['all', 'customer', 'prospect', 'lead', 'inactive'] as const).map((status) => (
           <button
-            key={s}
-            onClick={() => setFilterStatus(s)}
-            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
-              filterStatus === s
+            key={status}
+            onClick={() => setFilterStatus(status)}
+            className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors ${
+              filterStatus === status
                 ? 'bg-indigo-600 text-white'
-                : 'bg-white text-slate-600 border border-slate-200 hover:border-indigo-300 hover:text-indigo-600'
+                : 'border border-slate-200 bg-white text-slate-600 hover:border-indigo-300 hover:text-indigo-600'
             }`}
           >
-            {s === 'all' ? 'Todos' : STATUS_LABELS[s]} ({counts[s]})
+            {status === 'all' ? 'Todos' : STATUS_LABELS[status]} ({counts[status]})
           </button>
         ))}
+
         <div className="ml-auto">
           <input
             type="text"
             placeholder="Buscar por nombre, empresa o codigo..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="border border-slate-200 rounded-xl px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 w-72"
+            className="w-72 rounded-xl border border-slate-300 bg-white px-3 py-1.5 text-sm text-slate-800 placeholder:text-slate-400 focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-200"
           />
         </div>
       </div>
 
-      {/* Table */}
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+      <div className="overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-sm">
         {loading ? (
           <div className="flex items-center justify-center py-20">
-            <div className="w-8 h-8 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin" />
+            <div className="h-8 w-8 animate-spin rounded-full border-4 border-indigo-200 border-t-indigo-600" />
           </div>
         ) : filtered.length === 0 ? (
           <div className="p-16 text-center">
-            <div className="text-4xl mb-3">👥</div>
-            <p className="text-slate-500 font-medium">No se encontraron contactos</p>
-            <p className="text-slate-400 text-sm mt-1">Prueba con otro filtro o agrega un contacto nuevo.</p>
+            <div className="mb-3 text-4xl">Contactos</div>
+            <p className="font-medium text-slate-500">No se encontraron contactos</p>
+            <p className="mt-1 text-sm text-slate-400">Prueba con otro filtro o agrega un contacto nuevo.</p>
           </div>
         ) : (
           <table className="w-full text-sm">
             <thead>
-              <tr className="text-left text-xs font-semibold text-slate-400 uppercase tracking-wide bg-slate-50/80">
+              <tr className="bg-slate-50/80 text-left text-xs font-semibold uppercase tracking-wide text-slate-400">
                 <th className="px-6 py-3.5">Expediente</th>
                 <th className="px-6 py-3.5">Cliente</th>
                 <th className="px-6 py-3.5">Email</th>
-                <th className="px-6 py-3.5">Teléfono</th>
+                <th className="px-6 py-3.5">Telefono</th>
                 <th className="px-6 py-3.5">Ciudad</th>
                 <th className="px-6 py-3.5">Estado</th>
                 <th className="px-6 py-3.5">Acciones</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
-              {filtered.map((c, i) => (
-                <tr key={c.id} className="hover:bg-slate-50/60 transition-colors group">
+              {filtered.map((contact, index) => (
+                <tr key={contact.id} className="transition-colors hover:bg-slate-50/60">
                   <td className="px-6 py-4">
                     <span className="inline-flex rounded-xl border border-indigo-100 bg-indigo-50 px-3 py-1 font-mono text-xs font-bold text-indigo-700">
-                      {c.client_code || 'CLI-????'}
+                      {contact.client_code || 'CLI-????'}
                     </span>
                   </td>
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3">
-                      <Avatar name={c.name} idx={i} />
+                      <Avatar name={contact.name} idx={index} />
                       <div>
-                        <p className="font-semibold text-slate-800">{c.name}</p>
-                        <p className="text-xs text-slate-400">{c.company || 'Sin empresa cargada'}</p>
+                        <p className="font-semibold text-slate-800">{contact.name}</p>
+                        <p className="text-xs text-slate-500">{contact.company || 'Sin empresa cargada'}</p>
                       </div>
                     </div>
                   </td>
-                  <td className="px-6 py-4 text-slate-600">{c.email}</td>
-                  <td className="px-6 py-4 text-slate-600">{c.phone || '—'}</td>
-                  <td className="px-6 py-4 text-slate-600">
-                    {c.city ? (
+                  <td className="px-6 py-4 text-slate-700">{contact.email || '—'}</td>
+                  <td className="px-6 py-4 text-slate-700">{contact.phone || '—'}</td>
+                  <td className="px-6 py-4 text-slate-700">
+                    {contact.city ? (
                       <span className="flex items-center gap-1">
-                        <span className="text-slate-400">📍</span> {c.city}
+                        <span className="text-slate-400">📍</span>
+                        {contact.city}
                       </span>
-                    ) : '—'}
+                    ) : (
+                      '—'
+                    )}
                   </td>
                   <td className="px-6 py-4">
-                    <span className={`inline-flex px-2.5 py-0.5 rounded-full text-xs font-semibold ${STATUS_COLORS[c.status]}`}>
-                      {STATUS_LABELS[c.status]}
+                    <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold ${STATUS_COLORS[contact.status]}`}>
+                      {STATUS_LABELS[contact.status]}
                     </span>
                   </td>
                   <td className="px-6 py-4">
-                    <div className="flex items-center gap-3 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <Link href={`/contacts/${c.id}`} className="text-indigo-600 hover:text-indigo-800 text-xs font-semibold">
+                    <div className="flex items-center gap-2">
+                      <Link href={`/contacts/${contact.id}`} className="rounded-lg bg-indigo-50 px-2.5 py-1 text-xs font-semibold text-indigo-700 transition-colors hover:bg-indigo-100">
                         Expediente
                       </Link>
-                      <button onClick={() => openEdit(c)} className="text-slate-500 hover:text-slate-700 text-xs font-semibold">
+                      <button onClick={() => openEdit(contact)} className="rounded-lg bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-700 transition-colors hover:bg-slate-200">
                         Editar
                       </button>
-                      <button onClick={() => handleDelete(c.id)} className="text-red-500 hover:text-red-700 text-xs font-semibold">
+                      <button onClick={() => handleDelete(contact.id)} className="rounded-lg bg-red-50 px-2.5 py-1 text-xs font-semibold text-red-600 transition-colors hover:bg-red-100">
                         Eliminar
                       </button>
                     </div>
@@ -236,71 +253,102 @@ export default function ContactsClient() {
         )}
       </div>
 
-      {/* Modal */}
       {showModal && !editing && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <NuevoClienteForm onClose={() => { setShowModal(false); load(); }} />
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
+          <NuevoClienteForm
+            onClose={() => {
+              setShowModal(false);
+              load();
+            }}
+          />
         </div>
       )}
 
       {showModal && editing && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md">
-            <div className="flex items-center justify-between px-6 py-5 border-b border-slate-100">
-              <h2 className="font-bold text-slate-800 text-lg">Editar cliente</h2>
-              <button onClick={() => { setShowModal(false); setEditing(null); }} className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-2xl bg-white shadow-2xl">
+            <div className="flex items-center justify-between border-b border-slate-100 px-6 py-5">
+              <h2 className="text-lg font-bold text-slate-800">Editar cliente</h2>
+              <button
+                onClick={() => {
+                  setShowModal(false);
+                  setEditing(null);
+                }}
+                className="flex h-8 w-8 items-center justify-center rounded-full text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600"
+              >
+                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                 </svg>
               </button>
             </div>
-            <form onSubmit={handleSubmit} className="p-6 space-y-4">
+
+            <form onSubmit={handleSubmit} className="space-y-4 p-6">
               <div className="rounded-xl border border-indigo-100 bg-indigo-50 px-4 py-3">
                 <p className="text-xs font-medium text-indigo-600">Expediente</p>
                 <p className="font-mono text-sm font-bold text-indigo-800">{editing.client_code || 'CLI-????'}</p>
               </div>
+
               <div className="grid grid-cols-2 gap-4">
                 <div className="col-span-2">
-                  <label className="block text-xs font-semibold text-slate-600 mb-1.5">Nombre completo</label>
-                  <input required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })}
-                    className="w-full border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:border-transparent" />
+                  <label className="mb-1.5 block text-xs font-semibold text-slate-600">Nombre completo</label>
+                  <input required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className={inputClass} />
                 </div>
+
                 <div>
-                  <label className="block text-xs font-semibold text-slate-600 mb-1.5">Email</label>
-                  <input type="email" required value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })}
-                    className="w-full border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:border-transparent" />
+                  <label className="mb-1.5 block text-xs font-semibold text-slate-600">Email</label>
+                  <input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} className={inputClass} />
                 </div>
+
                 <div>
-                  <label className="block text-xs font-semibold text-slate-600 mb-1.5">Teléfono</label>
-                  <input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })}
-                    className="w-full border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:border-transparent" />
+                  <label className="mb-1.5 block text-xs font-semibold text-slate-600">Telefono</label>
+                  <input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} className={inputClass} />
                 </div>
+
                 <div>
-                  <label className="block text-xs font-semibold text-slate-600 mb-1.5">Empresa</label>
-                  <input required value={form.company} onChange={(e) => setForm({ ...form, company: e.target.value })}
-                    className="w-full border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:border-transparent" />
+                  <label className="mb-1.5 block text-xs font-semibold text-slate-600">Empresa</label>
+                  <input value={form.company} onChange={(e) => setForm({ ...form, company: e.target.value })} placeholder="Opcional" className={inputClass} />
                 </div>
+
                 <div>
-                  <label className="block text-xs font-semibold text-slate-600 mb-1.5">Ciudad</label>
-                  <input placeholder="Ej: Madrid, Barcelona..." value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })}
-                    className="w-full border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:border-transparent" />
+                  <label className="mb-1.5 block text-xs font-semibold text-slate-600">Ciudad</label>
+                  <input value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })} placeholder="Ej. Mejicanos" className={inputClass} />
                 </div>
+
                 <div className="col-span-2">
-                  <label className="block text-xs font-semibold text-slate-600 mb-1.5">Estado</label>
-                  <select value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value as ContactStatus })}
-                    className="w-full border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:border-transparent">
-                    {Object.entries(STATUS_LABELS).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+                  <label className="mb-1.5 block text-xs font-semibold text-slate-600">Dirección</label>
+                  <input value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} placeholder="Referencia, colonia, calle o ubicación" className={inputClass} />
+                </div>
+
+                <div className="col-span-2">
+                  <label className="mb-1.5 block text-xs font-semibold text-slate-600">Estado</label>
+                  <select value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value as ContactStatus })} className={inputClass}>
+                    {Object.entries(STATUS_LABELS).map(([value, label]) => (
+                      <option key={value} value={value}>
+                        {label}
+                      </option>
+                    ))}
                   </select>
                 </div>
               </div>
-              <p className="text-xs text-slate-400">El expediente se mantiene fijo. Solo editamos los datos del cliente.</p>
+
+              <p className="text-xs text-slate-500">El expediente se mantiene fijo. Aquí sí editas claramente los datos guardados del cliente.</p>
+
               <div className="flex gap-3 pt-1">
-                <button type="button" onClick={() => { setShowModal(false); setEditing(null); }}
-                  className="flex-1 border border-slate-200 text-slate-600 rounded-xl py-2.5 text-sm font-semibold hover:bg-slate-50 transition-colors">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowModal(false);
+                    setEditing(null);
+                  }}
+                  className="flex-1 rounded-xl border border-slate-300 py-2.5 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50"
+                >
                   Cancelar
                 </button>
-                <button type="submit" disabled={saving}
-                  className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl py-2.5 text-sm font-semibold transition-colors disabled:opacity-50">
+                <button
+                  type="submit"
+                  disabled={saving}
+                  className="flex-1 rounded-xl bg-indigo-600 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-indigo-700 disabled:opacity-50"
+                >
                   {saving ? 'Guardando...' : 'Guardar'}
                 </button>
               </div>
