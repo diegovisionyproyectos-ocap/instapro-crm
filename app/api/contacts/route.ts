@@ -1,4 +1,5 @@
 import { store, geocodeCity } from '@/lib/store';
+import { hasCoords } from '@/lib/geocoding';
 import { getNextClientCode } from '@/lib/clientCodes';
 
 const useSupabase = !!(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
@@ -14,7 +15,23 @@ export async function GET() {
   if (sb) {
     const { data, error } = await sb.from('contacts').select('*').order('created_at', { ascending: false });
     if (error) return Response.json({ error: error.message }, { status: 500 });
-    return Response.json(data);
+    const contacts = Array.isArray(data) ? data : [];
+
+    await Promise.all(
+      contacts.map(async (contact) => {
+        if (hasCoords(contact.lat, contact.lng)) return;
+        const locationStr = contact.address || contact.city;
+        if (!locationStr) return;
+        const coords = await geocodeCity(locationStr);
+        if (!coords) return;
+
+        contact.lat = coords.lat;
+        contact.lng = coords.lng;
+        await sb.from('contacts').update(coords).eq('id', contact.id);
+      })
+    );
+
+    return Response.json(contacts);
   }
   return Response.json(store.getContacts());
 }
@@ -24,7 +41,7 @@ export async function POST(request: Request) {
 
   // Geocode city or address if provided and no coords
   const locationStr = body.address || body.city;
-  if (locationStr && !body.lat) {
+  if (locationStr && !hasCoords(body.lat, body.lng)) {
     const coords = await geocodeCity(locationStr);
     if (coords) { body.lat = coords.lat; body.lng = coords.lng; }
   }

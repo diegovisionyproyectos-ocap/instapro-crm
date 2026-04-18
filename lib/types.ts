@@ -93,5 +93,6 @@ export interface ProjectEvent {
     client_code?: string | null;
     lat: number | null;
     lng: number | null;
+    installer_name?: string | null;
   };
 }

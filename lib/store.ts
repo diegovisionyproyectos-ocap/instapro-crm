@@ -1,4 +1,5 @@
 import type { Contact, Deal } from './types';
+import { geocodeLocation } from './geocoding';
 
 let contacts: Contact[] = [
   {
@@ -153,15 +154,5 @@ export const store = {
 };
 
 export async function geocodeCity(city: string): Promise<{ lat: number; lng: number } | null> {
-  try {
-    const res = await fetch(
-      `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(city)}&format=json&limit=1`,
-      { headers: { 'User-Agent': 'InstaPro-CRM/1.0' } }
-    );
-    const data = await res.json();
-    if (data.length > 0) {
-      return { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) };
-    }
-  } catch {}
-  return null;
+  return geocodeLocation(city);
 }

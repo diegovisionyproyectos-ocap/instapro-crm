@@ -4,6 +4,7 @@ import { useEffect, useState, useMemo } from 'react';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import type { Contact, ContactStatus, ProjectEvent } from '@/lib/types';
+import { hasCoords } from '@/lib/geocoding';
 
 const LeafletMap = dynamic(() => import('./LeafletMap'), {
   ssr: false,
@@ -52,8 +53,15 @@ const STATUS_LABELS: Record<ContactStatus, string> = {
   inactive: 'Inactivo',
 };
 
-const TODAY = new Date().toISOString().split('T')[0];
-const TOMORROW = new Date(Date.now() + 86400000).toISOString().split('T')[0];
+function formatLocalIsoDate(date: Date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+const TODAY = formatLocalIsoDate(new Date());
+const TOMORROW = formatLocalIsoDate(new Date(Date.now() + 86400000));
 
 function formatDate(d: string) {
   return new Date(d + 'T12:00:00').toLocaleDateString('es-AR', {
@@ -195,7 +203,6 @@ export default function MapClient() {
       .finally(() => setLoading(false));
 
     if (navigator.geolocation) {
-      setLocStatus('loading');
       navigator.geolocation.getCurrentPosition(
         (pos) => { setUserLocation([pos.coords.latitude, pos.coords.longitude]); setLocStatus('ok'); },
         () => setLocStatus('denied'),
@@ -209,7 +216,7 @@ export default function MapClient() {
     if (smartFilter === 'all') {
       // Show contacts
       return contacts
-        .filter((c) => c.lat && c.lng)
+        .filter((c) => hasCoords(c.lat, c.lng))
         .filter((c) => contactFilter === 'all' || c.status === contactFilter)
         .filter((c) => {
           const q = search.toLowerCase();
@@ -234,7 +241,7 @@ export default function MapClient() {
       // Events of type 'visit' → clientes potenciales
       const seen = new Set<string>();
       return events
-        .filter((e) => e.event_type === 'visit' && e.project?.lat && e.project?.lng)
+        .filter((e) => e.event_type === 'visit' && hasCoords(e.project?.lat, e.project?.lng))
         .filter((e) => {
           const key = `${e.project_id}-${e.event_date}`;
           if (seen.has(key)) return false;
@@ -257,8 +264,8 @@ export default function MapClient() {
           tagColor: '#8b5cf6',
           date: e.event_date,
           time: e.event_time || undefined,
-          projectId: (e.project as any)?.id,
-          contactId: (e.project as any)?.contact_id,
+          projectId: e.project?.id,
+          contactId: e.project?.contact_id || undefined,
           sourceType: 'event' as const,
         }));
     }
@@ -267,7 +274,7 @@ export default function MapClient() {
       // Installation events from tomorrow onwards
       const seen = new Set<string>();
       return events
-        .filter((e) => e.event_type === 'installation' && e.event_date >= TOMORROW && e.project?.lat && e.project?.lng)
+        .filter((e) => e.event_type === 'installation' && e.event_date >= TOMORROW && hasCoords(e.project?.lat, e.project?.lng))
         .filter((e) => {
           const key = e.project_id;
           if (seen.has(key)) return false;
@@ -290,8 +297,8 @@ export default function MapClient() {
           tagColor: '#3b82f6',
           date: e.event_date,
           time: e.event_time || undefined,
-          projectId: (e.project as any)?.id,
-          installer: (e.project as any)?.installer_name,
+          projectId: e.project?.id,
+          installer: e.project?.installer_name || undefined,
           sourceType: 'event' as const,
         }));
     }
@@ -299,7 +306,7 @@ export default function MapClient() {
     if (smartFilter === 'live') {
       // Installation events happening TODAY
       return events
-        .filter((e) => e.event_type === 'installation' && e.event_date === TODAY && e.project?.lat && e.project?.lng)
+        .filter((e) => e.event_type === 'installation' && e.event_date === TODAY && hasCoords(e.project?.lat, e.project?.lng))
         .filter((e) => {
           const q = search.toLowerCase();
           return !q || (e.project?.name || '').toLowerCase().includes(q) || (e.project?.contact_name || '').toLowerCase().includes(q);
@@ -316,8 +323,8 @@ export default function MapClient() {
           tagColor: '#f97316',
           date: e.event_date,
           time: e.event_time || undefined,
-          projectId: (e.project as any)?.id,
-          installer: (e.project as any)?.installer_name,
+          projectId: e.project?.id,
+          installer: e.project?.installer_name || undefined,
           sourceType: 'event' as const,
         }));
     }
@@ -327,12 +334,12 @@ export default function MapClient() {
 
   // Count per smart filter
   const counts = useMemo(() => {
-    const visitIds = new Set(events.filter((e) => e.event_type === 'visit' && e.project?.lat).map((e) => e.project_id));
-    const upcoming = events.filter((e) => e.event_type === 'installation' && e.event_date >= TOMORROW && e.project?.lat);
+    const visitIds = new Set(events.filter((e) => e.event_type === 'visit' && hasCoords(e.project?.lat, e.project?.lng)).map((e) => e.project_id));
+    const upcoming = events.filter((e) => e.event_type === 'installation' && e.event_date >= TOMORROW && hasCoords(e.project?.lat, e.project?.lng));
     const upcomingIds = new Set(upcoming.map((e) => e.project_id));
-    const live = events.filter((e) => e.event_type === 'installation' && e.event_date === TODAY && e.project?.lat);
+    const live = events.filter((e) => e.event_type === 'installation' && e.event_date === TODAY && hasCoords(e.project?.lat, e.project?.lng));
     return {
-      all: contacts.filter((c) => c.lat && c.lng).length,
+      all: contacts.filter((c) => hasCoords(c.lat, c.lng)).length,
       potential: visitIds.size,
       upcoming: upcomingIds.size,
       live: live.length,
@@ -407,8 +414,8 @@ export default function MapClient() {
                 const color = k === 'all' ? '#6366f1' : STATUS_COLORS[k];
                 const label = k === 'all' ? 'Todos' : STATUS_LABELS[k];
                 const count = k === 'all'
-                  ? contacts.filter(c => c.lat && c.lng).length
-                  : contacts.filter(c => c.lat && c.lng && c.status === k).length;
+                  ? contacts.filter(c => hasCoords(c.lat, c.lng)).length
+                  : contacts.filter(c => hasCoords(c.lat, c.lng) && c.status === k).length;
                 return (
                   <button
                     key={k}
