@@ -3,8 +3,11 @@ import { geocodeLocation, hasCoords } from '@/lib/geocoding';
 
 type ProjectEventRow = {
   project?: ({
+    id?: string | null;
     contact_name?: string | null;
     address?: string | null;
+    lat?: number | null;
+    lng?: number | null;
     contact?: { client_code?: string | null; name?: string | null; city?: string | null; address?: string | null } | null;
   } & Record<string, unknown>) | null;
 } & Record<string, unknown>;
@@ -40,7 +43,7 @@ export async function GET() {
   await Promise.all(
     events.map(async (event) => {
       const project = event.project;
-      if (!project || hasCoords(project.lat as number | null, project.lng as number | null)) return;
+      if (!project || hasCoords(project.lat, project.lng)) return;
 
       const locationStr =
         (typeof project.address === 'string' && project.address) ||
