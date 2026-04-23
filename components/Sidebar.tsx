@@ -87,7 +87,7 @@ const nav = [
   },
 ];
 
-export default function Sidebar() {
+export default function Sidebar({ isOpen = false, onClose }: { isOpen?: boolean; onClose?: () => void }) {
   const pathname = usePathname();
   const router = useRouter();
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
@@ -112,7 +112,12 @@ export default function Sidebar() {
   };
 
   return (
-    <aside className="w-64 min-h-screen flex flex-col shrink-0" style={{ background: 'linear-gradient(180deg, #0f172a 0%, #1e1b4b 100%)' }}>
+    <aside
+      className={`fixed inset-y-0 left-0 z-40 w-64 flex flex-col transition-transform duration-300 ease-in-out md:relative md:inset-auto md:z-auto md:translate-x-0 ${
+        isOpen ? 'translate-x-0' : '-translate-x-full'
+      }`}
+      style={{ background: 'linear-gradient(180deg, #0f172a 0%, #1e1b4b 100%)' }}
+    >
       {/* Logo */}
       <div className="px-6 py-6 border-b border-white/10">
         <div className="flex items-center gap-3">
@@ -126,10 +131,20 @@ export default function Sidebar() {
               </svg>
             </div>
           )}
-          <div>
-            <h1 className="text-white font-bold text-base tracking-tight">{companyName}</h1>
+          <div className="flex-1 min-w-0">
+            <h1 className="text-white font-bold text-base tracking-tight truncate">{companyName}</h1>
             <p className="text-indigo-300 text-xs">Gestión de clientes</p>
           </div>
+          {/* Close button — mobile only */}
+          <button
+            onClick={onClose}
+            className="md:hidden w-7 h-7 flex items-center justify-center rounded-lg text-white/50 hover:text-white hover:bg-white/10 transition-colors shrink-0"
+            aria-label="Cerrar menú"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
         </div>
       </div>
 
@@ -155,6 +170,7 @@ export default function Sidebar() {
             <Link
               key={href}
               href={href}
+              onClick={onClose}
               className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150 ${
                 active
                   ? 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/30'

@@ -191,6 +191,7 @@ export default function MapClient() {
   const [selectedMarker, setSelectedMarker] = useState<MapMarker | null>(null);
   const [userLocation, setUserLocation] = useState<[number, number] | null>(null);
   const [locStatus, setLocStatus] = useState<'idle' | 'loading' | 'ok' | 'denied'>('idle');
+  const [panelOpen, setPanelOpen] = useState(false);
 
   useEffect(() => {
     Promise.all([fetch('/api/contacts'), fetch('/api/events')])
@@ -458,7 +459,18 @@ export default function MapClient() {
       </div>
 
       {/* Map + panel */}
-      <div className="flex flex-1 min-h-0">
+      <div className="flex flex-1 min-h-0 relative">
+        {/* Mobile panel toggle button */}
+        <button
+          onClick={() => setPanelOpen(!panelOpen)}
+          className="md:hidden absolute top-3 right-3 z-[1001] bg-white rounded-xl shadow-md border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 flex items-center gap-1.5"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h10M4 18h7" />
+          </svg>
+          Lista
+        </button>
+
         {/* Map */}
         <div className="flex-1 relative">
           {loading ? (
@@ -469,7 +481,7 @@ export default function MapClient() {
             <LeafletMap
               markers={markers}
               selectedId={selectedMarker?.id || null}
-              onSelect={(id) => setSelectedMarker(markers.find(m => m.id === id) || null)}
+              onSelect={(id) => { setSelectedMarker(markers.find(m => m.id === id) || null); setPanelOpen(true); }}
               userLocation={userLocation}
             />
           )}
@@ -545,8 +557,8 @@ export default function MapClient() {
           </div>
         </div>
 
-        {/* Right panel */}
-        <div className="w-72 shrink-0 bg-white border-l border-slate-200 flex flex-col overflow-hidden">
+        {/* Right panel — hidden on mobile unless toggled */}
+        <div className={`${panelOpen ? 'flex' : 'hidden'} md:flex w-72 shrink-0 bg-white border-l border-slate-200 flex-col overflow-hidden absolute md:relative inset-y-0 right-0 z-[1000] md:z-auto shadow-xl md:shadow-none`}>
           {selectedMarker ? (
             <>
               <MarkerPanel marker={selectedMarker} onClose={() => setSelectedMarker(null)} />
