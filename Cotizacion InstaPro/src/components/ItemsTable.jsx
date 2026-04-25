@@ -2,7 +2,7 @@ import { calcTotales } from '../utils/pdfGenerator';
 
 const ITEM_EMPTY = { descripcion: '', cantidad: 1, precioUnitario: '' };
 
-export default function ItemsTable({ items, onChange, descuento, incluyeIVA = true }) {
+export default function ItemsTable({ items, onChange, descuento, incluyeIVA = true, ajuste = '', ajusteLabel = 'Ajuste', mostrarAnticipo = false, anticipoPct = '50' }) {
   function updateItem(index, field, value) {
     const updated = items.map((item, i) =>
       i === index ? { ...item, [field]: value } : item
@@ -18,7 +18,10 @@ export default function ItemsTable({ items, onChange, descuento, incluyeIVA = tr
     onChange(items.filter((_, i) => i !== index));
   }
 
-  const { subtotal, descMonto, subtotalDesc, iva, total } = calcTotales(items, parseFloat(descuento) || 0, incluyeIVA);
+  const { subtotal, descMonto, subtotalDesc, iva, ajusteMonto, total } = calcTotales(items, parseFloat(descuento) || 0, incluyeIVA, ajuste);
+  const anticipoPctNum = parseFloat(anticipoPct) || 50;
+  const anticipoMonto  = mostrarAnticipo ? total * anticipoPctNum / 100 : 0;
+  const saldoPendiente = mostrarAnticipo ? total - anticipoMonto : 0;
   const fmt = (n) => `$${Number(n).toFixed(2)}`;
 
   return (
@@ -122,10 +125,28 @@ export default function ItemsTable({ items, onChange, descuento, incluyeIVA = tr
             <span className="font-medium">{fmt(iva)}</span>
           </div>
         )}
+        {ajusteMonto !== 0 && (
+          <div className={`flex justify-between ${ajusteMonto > 0 ? 'text-green-700' : 'text-red-600'}`}>
+            <span>{ajusteLabel || 'Ajuste'}</span>
+            <span className="font-medium">{ajusteMonto > 0 ? '+' : ''}{fmt(ajusteMonto)}</span>
+          </div>
+        )}
         <div className="flex justify-between text-base font-bold text-instapro-blue border-t pt-2 mt-2">
           <span>TOTAL COTIZADO</span>
           <span>{fmt(total)}</span>
         </div>
+        {mostrarAnticipo && total > 0 && (
+          <div className="border-t pt-2 mt-2 space-y-1">
+            <div className="flex justify-between text-gray-600">
+              <span>Anticipo ({anticipoPctNum}%)</span>
+              <span className="font-medium">− {fmt(anticipoMonto)}</span>
+            </div>
+            <div className="flex justify-between text-base font-bold text-emerald-700 border-t pt-2 mt-1">
+              <span>SALDO PENDIENTE</span>
+              <span>{fmt(saldoPendiente)}</span>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

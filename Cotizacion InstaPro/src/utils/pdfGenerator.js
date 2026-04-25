@@ -197,7 +197,8 @@ export async function generarPDF(datos, firmaDataUrl = null) {
   const subtotalDesc = subtotal - descMonto;
   const incluyeIVA   = datos.incluyeIVA !== false; // default true
   const iva          = incluyeIVA ? subtotalDesc * 0.13 : 0;
-  const total        = subtotalDesc + iva;
+  const ajusteMonto  = parseFloat(datos.ajuste) || 0;
+  const total        = subtotalDesc + iva + ajusteMonto;
 
   drawR(fmt(subtotal),     coords.subtotalR.x,     coords.subtotalR.y);
   if (descPct > 0) {
@@ -210,6 +211,39 @@ export async function generarPDF(datos, firmaDataUrl = null) {
   drawR(fmt(subtotalDesc), coords.subtotalDescR.x,    coords.subtotalDescR.y);
   drawR(fmt(iva),          coords.ivaR.x,             coords.ivaR.y);
   drawR(fmt(total),        coords.totalR.x,           coords.totalR.y, { bold: true, color: WHITE });
+
+  // ── Ajuste y anticipo (debajo del TOTAL, encima de la firma)
+  const LABEL_X   = 350;
+  const RIGHT_X   = coords.totalR.x;
+  let   extraY    = coords.totalR.y - 16; // primer slot bajo el total
+
+  if (ajusteMonto !== 0) {
+    const sign  = ajusteMonto > 0 ? '+' : '';
+    const label = datos.ajusteLabel || 'Ajuste';
+    draw(`${label}:`, LABEL_X, extraY, { size: 6.5 });
+    drawR(`${sign}${fmt(ajusteMonto)}`, RIGHT_X, extraY, { size: 6.5 });
+    extraY -= 14;
+  }
+
+  const mostrarAnticipo = datos.mostrarAnticipo;
+  const anticipoPct     = parseFloat(datos.anticipoPct) || 50;
+  if (mostrarAnticipo && total > 0) {
+    const anticipo = total * anticipoPct / 100;
+    const saldo    = total - anticipo;
+
+    page.drawLine({
+      start: { x: LABEL_X, y: (extraY + 10) + adjustY },
+      end:   { x: RIGHT_X, y: (extraY + 10) + adjustY },
+      thickness: 0.5, color: rgb(0.75, 0.75, 0.75),
+    });
+
+    draw(`Anticipo (${anticipoPct}%):`, LABEL_X, extraY, { size: 6.5 });
+    drawR(`-${fmt(anticipo)}`, RIGHT_X, extraY, { size: 6.5 });
+    extraY -= 13;
+
+    draw('Saldo pendiente:', LABEL_X, extraY, { size: 7, color: BRAND_BLUE });
+    drawR(fmt(saldo), RIGHT_X, extraY, { size: 7, color: BRAND_BLUE });
+  }
 
   // ── Firma
   if (firmaDataUrl) {
@@ -380,13 +414,15 @@ export function calcSubtotal(items = []) {
     s + (parseFloat(it.precioUnitario) || 0) * (parseFloat(it.cantidad) || 0), 0);
 }
 
-export function calcTotales(items = [], pct = 0, incluyeIVA = true) {
+export function calcTotales(items = [], pct = 0, incluyeIVA = true, ajuste = 0) {
   const subtotal     = calcSubtotal(items);
   const descMonto    = subtotal * pct / 100;
   const subtotalDesc = subtotal - descMonto;
   const iva          = incluyeIVA ? subtotalDesc * 0.13 : 0;
-  const total        = subtotalDesc + iva;
-  return { subtotal, descMonto, subtotalDesc, iva, total };
+  const totalBase    = subtotalDesc + iva;
+  const ajusteMonto  = parseFloat(ajuste) || 0;
+  const total        = totalBase + ajusteMonto;
+  return { subtotal, descMonto, subtotalDesc, iva, ajusteMonto, totalBase, total };
 }
 
 export function downloadPdfBytes(bytes, filename = 'cotizacion.pdf') {

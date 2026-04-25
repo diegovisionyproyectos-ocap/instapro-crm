@@ -30,6 +30,10 @@ const DEFAULT_FORM = {
   clienteNRC:    '',
   descuento:     '0',
   incluyeIVA:    true,
+  ajuste:        '',
+  ajusteLabel:   'Ajuste de presupuesto',
+  mostrarAnticipo: false,
+  anticipoPct:   '50',
   condicionesPago: '50% anticipo / 50% contra entrega',
   fechaInstalacion: '10 días hábiles a partir de su aprobación',
   notas: '',
@@ -139,7 +143,7 @@ export default function FormPage() {
     window.open(`https://wa.me/${phone}?text=${msg}`, '_blank');
   }
 
-  const { total } = calcTotales(items, parseFloat(form.descuento) || 0);
+  const { total } = calcTotales(items, parseFloat(form.descuento) || 0, form.incluyeIVA, form.ajuste);
   const fmt = (n) => `$${Number(n).toFixed(2)}`;
 
   return (
@@ -243,7 +247,88 @@ export default function FormPage() {
               )}
             </div>
           </div>
-          <ItemsTable items={items} onChange={setItems} descuento={form.descuento} incluyeIVA={form.incluyeIVA} />
+
+          {/* ── Ajuste de presupuesto ──────────────────────────────── */}
+          <div className="mb-4 p-4 bg-gray-50 rounded-lg border border-gray-200 space-y-3">
+            <p className="text-sm font-semibold text-gray-700">Ajuste de presupuesto</p>
+            <div className="flex flex-wrap gap-3 items-end">
+              <div className="flex-1 min-w-[180px]">
+                <label className="text-xs text-gray-500 mb-1 block">Etiqueta del ajuste</label>
+                <input
+                  type="text"
+                  value={form.ajusteLabel}
+                  onChange={set('ajusteLabel')}
+                  placeholder="Ej: Descuento especial, Costo de envío…"
+                  className="w-full border border-gray-300 rounded px-3 py-1.5 text-sm focus:outline-none focus:border-instapro-blue"
+                />
+              </div>
+              <div className="w-40">
+                <label className="text-xs text-gray-500 mb-1 block">Monto (+/-)</label>
+                <div className="relative">
+                  <span className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 text-sm">$</span>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={form.ajuste}
+                    onChange={set('ajuste')}
+                    placeholder="0.00"
+                    className="w-full border border-gray-300 rounded pl-5 pr-3 py-1.5 text-sm focus:outline-none focus:border-instapro-blue"
+                  />
+                </div>
+                <p className="text-xs text-gray-400 mt-0.5">Negativo = descuento</p>
+              </div>
+            </div>
+          </div>
+
+          {/* ── Anticipo ──────────────────────────────────────────── */}
+          <div className="mb-5 p-4 bg-emerald-50 rounded-lg border border-emerald-200">
+            <div className="flex items-center gap-3 mb-3">
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={form.mostrarAnticipo}
+                  onChange={setCheck('mostrarAnticipo')}
+                  className="sr-only peer"
+                />
+                <div className="w-10 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-5 peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-600" />
+              </label>
+              <span className="text-sm font-semibold text-gray-700">Mostrar anticipo y saldo pendiente</span>
+            </div>
+            {form.mostrarAnticipo && (
+              <div className="flex items-end gap-3">
+                <div className="w-32">
+                  <label className="text-xs text-gray-500 mb-1 block">% de anticipo</label>
+                  <div className="relative">
+                    <input
+                      type="number"
+                      min="1"
+                      max="100"
+                      step="1"
+                      value={form.anticipoPct}
+                      onChange={set('anticipoPct')}
+                      className="w-full border border-emerald-300 rounded px-3 py-1.5 text-sm focus:outline-none focus:border-emerald-600 pr-7"
+                    />
+                    <span className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 text-sm">%</span>
+                  </div>
+                </div>
+                <AnticipoBadge
+                  total={total}
+                  pct={parseFloat(form.anticipoPct) || 50}
+                />
+              </div>
+            )}
+          </div>
+
+          <ItemsTable
+            items={items}
+            onChange={setItems}
+            descuento={form.descuento}
+            incluyeIVA={form.incluyeIVA}
+            ajuste={form.ajuste}
+            ajusteLabel={form.ajusteLabel}
+            mostrarAnticipo={form.mostrarAnticipo}
+            anticipoPct={form.anticipoPct}
+          />
         </div>
 
         {/* ── Condiciones ─────────────────────────────────────────── */}
@@ -362,6 +447,24 @@ function Field({ label, value, onChange, placeholder = '', type = 'text' }) {
         placeholder={placeholder}
         className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:border-instapro-blue"
       />
+    </div>
+  );
+}
+
+function AnticipoBadge({ total, pct }) {
+  const fmt = (n) => `$${Number(n).toFixed(2)}`;
+  const anticipo = total * pct / 100;
+  const saldo    = total - anticipo;
+  return (
+    <div className="flex gap-4 text-sm">
+      <div className="text-center">
+        <p className="text-xs text-gray-500">Anticipo ({pct}%)</p>
+        <p className="font-bold text-emerald-700">{fmt(anticipo)}</p>
+      </div>
+      <div className="text-center">
+        <p className="text-xs text-gray-500">Saldo pendiente</p>
+        <p className="font-bold text-emerald-700">{fmt(saldo)}</p>
+      </div>
     </div>
   );
 }
