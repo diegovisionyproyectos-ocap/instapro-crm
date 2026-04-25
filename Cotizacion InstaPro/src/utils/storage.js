@@ -70,6 +70,29 @@ export function decodeDataFromUrl(encoded) {
   }
 }
 
+// ─── Borrador de formulario en progreso ──────────────────────────────────────
+
+const DRAFT_KEY = 'instapro_cot_draft';
+
+export function saveDraft(data) {
+  try {
+    localStorage.setItem(DRAFT_KEY, JSON.stringify({ ...data, _savedAt: Date.now() }));
+  } catch (e) {}
+}
+
+export function loadDraft() {
+  try {
+    const raw = localStorage.getItem(DRAFT_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch (e) {
+    return null;
+  }
+}
+
+export function clearDraft() {
+  localStorage.removeItem(DRAFT_KEY);
+}
+
 function generateId() {
   return Math.random().toString(36).slice(2, 10) +
     Date.now().toString(36);

@@ -4,7 +4,7 @@ import AppNav from '../components/AppNav';
 import ItemsTable from '../components/ItemsTable';
 import PdfViewer from '../components/PdfViewer';
 import { generarPDF, downloadPdfBytes, calcTotales } from '../utils/pdfGenerator';
-import { saveCotizacion, encodeDataForUrl } from '../utils/storage';
+import { saveCotizacion, encodeDataForUrl, saveDraft, loadDraft, clearDraft } from '../utils/storage';
 
 const DEFAULT_ITEMS = [{ descripcion: '', cantidad: 1, precioUnitario: '' }];
 
@@ -19,6 +19,22 @@ const plusDays = (n) => {
   return d.toLocaleDateString('es-SV', { day: '2-digit', month: '2-digit', year: 'numeric' }).replace(/\//g, '/');
 };
 
+const DEFAULT_FORM = {
+  fechaEmision:  today(),
+  validaHasta:   plusDays(10),
+  vendedor:      'Diego Martínez',
+  clienteNombre: '',
+  clienteDireccion: '',
+  clienteTelefono: '',
+  clienteCorreo:  '',
+  clienteNRC:    '',
+  descuento:     '0',
+  incluyeIVA:    true,
+  condicionesPago: '50% anticipo / 50% contra entrega',
+  fechaInstalacion: '10 días hábiles a partir de su aprobación',
+  notas: '',
+};
+
 export default function FormPage() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
@@ -26,26 +42,45 @@ export default function FormPage() {
   const [showPreview, setShowPreview] = useState(false);
   const [generatedLink, setGeneratedLink] = useState('');
   const [copied, setCopied] = useState(false);
+  const [draftStatus, setDraftStatus] = useState(''); // 'saved' | 'restored' | ''
   const previewRef = useRef(null);
+  const saveTimer = useRef(null);
 
-  const [form, setForm] = useState({
-    fechaEmision:  today(),
-    validaHasta:   plusDays(10),
-    vendedor:      'Diego Martínez',
-    clienteNombre: '',
-    clienteDireccion: '',
-    clienteTelefono: '',
-    clienteCorreo:  '',
-    clienteNRC:    '',
-    descuento:     '0',
-    condicionesPago: '50% anticipo / 50% contra entrega',
-    fechaInstalacion: '10 días hábiles a partir de su aprobación',
-    notas: '',
+  // Restore draft on mount
+  const [form, setForm] = useState(() => {
+    const draft = loadDraft();
+    if (draft) return { ...DEFAULT_FORM, ...draft };
+    return DEFAULT_FORM;
   });
 
-  const [items, setItems] = useState(DEFAULT_ITEMS);
+  const [items, setItems] = useState(() => {
+    const draft = loadDraft();
+    return draft?._items || DEFAULT_ITEMS;
+  });
+
+  // Auto-save draft on every change (debounced 800ms)
+  useEffect(() => {
+    clearTimeout(saveTimer.current);
+    saveTimer.current = setTimeout(() => {
+      saveDraft({ ...form, _items: items });
+      setDraftStatus('saved');
+      setTimeout(() => setDraftStatus(''), 2000);
+    }, 800);
+    return () => clearTimeout(saveTimer.current);
+  }, [form, items]);
 
   const set = (field) => (e) => setForm(prev => ({ ...prev, [field]: e.target.value }));
+  const setCheck = (field) => (e) => setForm(prev => ({ ...prev, [field]: e.target.checked }));
+
+  function clearForm() {
+    if (!confirm('¿Limpiar todo el formulario y empezar de cero?')) return;
+    clearDraft();
+    setForm({ ...DEFAULT_FORM, fechaEmision: today(), validaHasta: plusDays(10) });
+    setItems(DEFAULT_ITEMS);
+    setPreviewBytes(null);
+    setShowPreview(false);
+    setGeneratedLink('');
+  }
 
   async function handlePreview() {
     setLoading(true);
@@ -120,9 +155,24 @@ export default function FormPage() {
             <p className="text-xs opacity-70">Sistema de Cotizaciones</p>
           </div>
         </div>
-        <div className="text-right text-sm opacity-80">
-          <p>instaprosv@gmail.com</p>
-          <p>(503) 7054-7633</p>
+        <div className="flex items-center gap-4">
+          {/* Draft indicator */}
+          {draftStatus === 'saved' && (
+            <span className="text-xs bg-white/15 text-white/90 px-2.5 py-1 rounded-full flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-green-400" />
+              Borrador guardado
+            </span>
+          )}
+          <button
+            onClick={clearForm}
+            className="text-xs text-white/70 hover:text-white border border-white/20 hover:border-white/50 px-3 py-1.5 rounded-lg transition"
+          >
+            Limpiar formulario
+          </button>
+          <div className="text-right text-sm opacity-80">
+            <p>instaprosv@gmail.com</p>
+            <p>(503) 7054-7633</p>
+          </div>
         </div>
       </div>
 
@@ -159,20 +209,41 @@ export default function FormPage() {
           <h2 className="text-instapro-blue font-bold text-lg mb-4 border-b border-instapro-lightblue pb-2">
             🛍️ Productos / Servicios
           </h2>
-          <div className="mb-4">
-            <label className="text-sm text-gray-600 mb-1 block">Descuento (%)</label>
-            <input
-              type="number"
-              min="0"
-              max="100"
-              step="1"
-              value={form.descuento}
-              onChange={set('descuento')}
-              className="w-32 border border-gray-300 rounded px-3 py-1.5 text-sm focus:outline-none focus:border-instapro-blue"
-              placeholder="0"
-            />
+          <div className="mb-4 flex flex-wrap items-end gap-6">
+            <div>
+              <label className="text-sm text-gray-600 mb-1 block">Descuento (%)</label>
+              <input
+                type="number"
+                min="0"
+                max="100"
+                step="1"
+                value={form.descuento}
+                onChange={set('descuento')}
+                className="w-32 border border-gray-300 rounded px-3 py-1.5 text-sm focus:outline-none focus:border-instapro-blue"
+                placeholder="0"
+              />
+            </div>
+            <div className="flex items-center gap-2 pb-1">
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={form.incluyeIVA}
+                  onChange={setCheck('incluyeIVA')}
+                  className="sr-only peer"
+                />
+                <div className="w-10 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-5 peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-instapro-blue" />
+              </label>
+              <span className="text-sm text-gray-700 font-medium">
+                Incluir IVA (13%)
+              </span>
+              {!form.incluyeIVA && (
+                <span className="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded px-2 py-0.5">
+                  El total no incluye impuesto
+                </span>
+              )}
+            </div>
           </div>
-          <ItemsTable items={items} onChange={setItems} descuento={form.descuento} />
+          <ItemsTable items={items} onChange={setItems} descuento={form.descuento} incluyeIVA={form.incluyeIVA} />
         </div>
 
         {/* ── Condiciones ─────────────────────────────────────────── */}

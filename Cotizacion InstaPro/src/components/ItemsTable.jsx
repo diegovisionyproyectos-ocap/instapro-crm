@@ -2,7 +2,7 @@ import { calcTotales } from '../utils/pdfGenerator';
 
 const ITEM_EMPTY = { descripcion: '', cantidad: 1, precioUnitario: '' };
 
-export default function ItemsTable({ items, onChange, descuento }) {
+export default function ItemsTable({ items, onChange, descuento, incluyeIVA = true }) {
   function updateItem(index, field, value) {
     const updated = items.map((item, i) =>
       i === index ? { ...item, [field]: value } : item
@@ -18,7 +18,7 @@ export default function ItemsTable({ items, onChange, descuento }) {
     onChange(items.filter((_, i) => i !== index));
   }
 
-  const { subtotal, descMonto, subtotalDesc, iva, total } = calcTotales(items, parseFloat(descuento) || 0);
+  const { subtotal, descMonto, subtotalDesc, iva, total } = calcTotales(items, parseFloat(descuento) || 0, incluyeIVA);
   const fmt = (n) => `$${Number(n).toFixed(2)}`;
 
   return (
@@ -110,14 +110,18 @@ export default function ItemsTable({ items, onChange, descuento }) {
             <span>− {fmt(descMonto)}</span>
           </div>
         )}
-        <div className="flex justify-between">
-          <span className="text-gray-600">Subtotal c/descuento</span>
-          <span className="font-medium">{fmt(subtotalDesc)}</span>
-        </div>
-        <div className="flex justify-between">
-          <span className="text-gray-600">IVA (13%)</span>
-          <span className="font-medium">{fmt(iva)}</span>
-        </div>
+        {(parseFloat(descuento) || 0) > 0 && (
+          <div className="flex justify-between">
+            <span className="text-gray-600">Subtotal c/descuento</span>
+            <span className="font-medium">{fmt(subtotalDesc)}</span>
+          </div>
+        )}
+        {incluyeIVA && (
+          <div className="flex justify-between">
+            <span className="text-gray-600">IVA (13%)</span>
+            <span className="font-medium">{fmt(iva)}</span>
+          </div>
+        )}
         <div className="flex justify-between text-base font-bold text-instapro-blue border-t pt-2 mt-2">
           <span>TOTAL COTIZADO</span>
           <span>{fmt(total)}</span>

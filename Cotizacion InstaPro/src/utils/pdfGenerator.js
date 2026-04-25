@@ -195,7 +195,8 @@ export async function generarPDF(datos, firmaDataUrl = null) {
   const descPct      = parseFloat(datos.descuento || 0);
   const descMonto    = subtotal * descPct / 100;
   const subtotalDesc = subtotal - descMonto;
-  const iva          = subtotalDesc * 0.13;
+  const incluyeIVA   = datos.incluyeIVA !== false; // default true
+  const iva          = incluyeIVA ? subtotalDesc * 0.13 : 0;
   const total        = subtotalDesc + iva;
 
   drawR(fmt(subtotal),     coords.subtotalR.x,     coords.subtotalR.y);
@@ -379,11 +380,11 @@ export function calcSubtotal(items = []) {
     s + (parseFloat(it.precioUnitario) || 0) * (parseFloat(it.cantidad) || 0), 0);
 }
 
-export function calcTotales(items = [], pct = 0) {
+export function calcTotales(items = [], pct = 0, incluyeIVA = true) {
   const subtotal     = calcSubtotal(items);
   const descMonto    = subtotal * pct / 100;
   const subtotalDesc = subtotal - descMonto;
-  const iva          = subtotalDesc * 0.13;
+  const iva          = incluyeIVA ? subtotalDesc * 0.13 : 0;
   const total        = subtotalDesc + iva;
   return { subtotal, descMonto, subtotalDesc, iva, total };
 }
