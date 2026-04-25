@@ -3,8 +3,6 @@ import { calcTotales } from '../utils/pdfGenerator';
 const ITEM_EMPTY = { descripcion: '', cantidad: 1, precioUnitario: '' };
 
 export default function ItemsTable({ items, onChange, descuento }) {
-  const MAX_ROWS = 4;
-
   function updateItem(index, field, value) {
     const updated = items.map((item, i) =>
       i === index ? { ...item, [field]: value } : item
@@ -13,9 +11,7 @@ export default function ItemsTable({ items, onChange, descuento }) {
   }
 
   function addItem() {
-    if (items.length < MAX_ROWS) {
-      onChange([...items, { ...ITEM_EMPTY }]);
-    }
+    onChange([...items, { ...ITEM_EMPTY }]);
   }
 
   function removeItem(index) {
@@ -87,7 +83,7 @@ export default function ItemsTable({ items, onChange, descuento }) {
       })}
 
       {/* Add row button */}
-      {items.length < MAX_ROWS && (
+      <div className="flex items-center justify-between">
         <button
           type="button"
           onClick={addItem}
@@ -95,7 +91,12 @@ export default function ItemsTable({ items, onChange, descuento }) {
         >
           + Agregar ítem
         </button>
-      )}
+        {items.length > 4 && (
+          <span className="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded px-2 py-1">
+            Los ítems {'>'}4 se generan en hoja adicional del PDF
+          </span>
+        )}
+      </div>
 
       {/* Totals summary */}
       <div className="mt-4 border-t pt-4 space-y-1 text-sm">
